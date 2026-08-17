@@ -1,0 +1,83 @@
+{
+  "name": "01_dispatch_intake",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dispatch-intake",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "name": "Webhook Intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/api/v1/dispatches/intake",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "po_number",
+              "value": "={{ $json.body.po_number }}"
+            },
+            {
+              "name": "dispatch_date",
+              "value": "={{ $json.body.dispatch_date }}"
+            },
+            {
+              "name": "documents",
+              "value": "={{ $json.body.documents }}"
+            },
+            {
+              "name": "whatsapp_message",
+              "value": "={{ $json.body.whatsapp_message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Call FastAPI Dispatch Intake",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "02_document_processing"
+      },
+      "name": "Trigger Document Processing",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Intake": {
+      "main": [
+        [
+          {
+            "node": "Call FastAPI Dispatch Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call FastAPI Dispatch Intake": {
+      "main": [
+        [
+          {
+            "node": "Trigger Document Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

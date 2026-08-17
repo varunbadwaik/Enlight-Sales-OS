@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=production
+      - PYTHONPATH=apps/api
+    env_file:
+      - .env
+    volumes:
+      - ./apps/api/uploads:/app/apps/api/uploads
+      - ./enlight_sales_os.db:/app/enlight_sales_os.db
+    restart: always
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    restart: always

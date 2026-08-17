@@ -1,0 +1,13 @@
+{
+  "customer_name": "XYZ Industries",
+  "po_number": "PO-98765",
+  "po_date": "2026-08-01",
+  "material": "HR Plate",
+  "grade": "IS 2062",
+  "size": "10x1500x6300",
+  "quantity": 12500,
+  "unit": "KG",
+  "selling_rate": 58.00,
+  "currency": "INR",
+  "delivery_location": "Pune"
+}

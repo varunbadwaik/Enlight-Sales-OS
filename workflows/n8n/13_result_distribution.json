@@ -1,0 +1,70 @@
+{
+  "name": "13_result_distribution",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/api/v1/invoices/draft-sync",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "dispatch_id",
+              "value": "={{ $json.dispatch_id }}"
+            },
+            {
+              "name": "invoice_id",
+              "value": "={{ $json.invoice_id }}"
+            },
+            {
+              "name": "source",
+              "value": "WHATSAPP"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Sync Web Draft Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "event",
+              "value": "WHATSAPP_WORKFLOW_COMPLETED"
+            },
+            {
+              "name": "message",
+              "value": "Draft invoice generated and synchronized with Web application."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Notify System",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Sync Web Draft Invoice": {
+      "main": [
+        [
+          {
+            "node": "Notify System",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "12_dispatch_to_invoice",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowId": "00_unified_end_to_end_flow"
+      },
+      "name": "Execute Dispatch End-to-End Flow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "13_result_distribution"
+      },
+      "name": "Trigger Result Distribution",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Execute Dispatch End-to-End Flow": {
+      "main": [
+        [
+          {
+            "node": "Trigger Result Distribution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

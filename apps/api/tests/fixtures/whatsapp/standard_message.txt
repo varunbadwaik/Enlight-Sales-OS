@@ -1,0 +1,12 @@
+Purchase From: ABC Steel
+Sale To: XYZ Industries
+Delivery As Per: PO-98765
+DO: DO-123
+SO: Rahul
+Grade: HR Plate
+Size: 10x1500x6300
+Weight: 12500 KG
+Vehicle No: MH12AB1234
+Driver: Ramesh
+Transport: XYZ Transport
+Dispatch: Pune

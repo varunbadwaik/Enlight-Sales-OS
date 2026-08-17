@@ -1,0 +1,359 @@
+{
+  "name": "Enlight Sales OS - Unified E2E Dispatch to Draft Invoice Flow (with WhatsApp AI Agent)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dispatch-intake",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0001-4000-8000-000000000001",
+      "name": "1a. Webhook Dispatch Intake (Web)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-agent-intake",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0001-4000-8000-00000000001a",
+      "name": "1b. Twilio WhatsApp Webhook Intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/v1/dispatches/intake",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"po_number\": \"{{ $json.body.po_number || 'PO-98765' }}\",\n  \"documents\": [\"purchase_bill.pdf\", \"po.pdf\", \"lr.jpg\", \"weight_slip.jpg\"],\n  \"whatsapp_message\": \"{{ $json.body.whatsapp_message || 'Intake via Workflow' }}\",\n  \"source\": \"{{ $json.body.source || 'WEB' }}\"\n}",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0002-4000-8000-000000000002",
+      "name": "2. FastAPI Intake Endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:8000/api/v1/dispatches/{{ $json.dispatch_id }}/process-documents",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0003-4000-8000-000000000003",
+      "name": "3. Gemini Document OCR Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [580, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_extracted != false && $json.status != 'UNCLEAR' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c1a2b3c4-0003-4000-8000-00000000003b",
+      "name": "3b. Document Clear & Extracted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"whatsapp_number\": \"{{ $node[\"1b. Twilio WhatsApp Webhook Intake\"].json.body.From || '+917588353703' }}\",\n  \"message\": \"the document is not clear. Please upload a clear photo or PDF of your Vendor Purchase Bill, Weighment Slip, LR, or Customer PO.\"\n}",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0003-4000-8000-00000000003c",
+      "name": "3c. Notify WhatsApp: The Document is Not Clear",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [700, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:8000/api/v1/dispatches/{{ $node[\"2. FastAPI Intake Endpoint\"].json.dispatch_id }}/validate",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0004-4000-8000-000000000004",
+      "name": "4. Cross-Document Validation Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.is_valid }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c1a2b3c4-0005-4000-8000-000000000005",
+      "name": "5. Validation Passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/v1/dispatches/log-error",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"workflow_name\": \"Validation Engine\",\n  \"error_message\": \"Validation failed: vehicle mismatch or weight difference outside tolerance limit.\"\n}",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0006-4000-8000-000000000006",
+      "name": "Validation Failed - Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1360, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:8000/api/v1/dispatches/{{ $node[\"2. FastAPI Intake Endpoint\"].json.dispatch_id }}/approve",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"decision\": \"APPROVED\",\n  \"comment\": \"Automated workflow validation passed\"\n}",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0007-4000-8000-000000000007",
+      "name": "6. Admin Approval Gate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1360, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:8000/api/v1/dispatches/{{ $node[\"2. FastAPI Intake Endpoint\"].json.dispatch_id }}/sync-zoho-project",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0008-4000-8000-000000000008",
+      "name": "7. Zoho Project Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1600, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:8000/api/v1/dispatches/{{ $node[\"2. FastAPI Intake Endpoint\"].json.dispatch_id }}/create-purchase-bill",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0009-4000-8000-000000000009",
+      "name": "8. Prepare Purchase Bill",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1840, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:8000/api/v1/dispatches/{{ $node[\"2. FastAPI Intake Endpoint\"].json.dispatch_id }}/create-draft-invoice",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0010-4000-8000-000000000010",
+      "name": "9. Create Draft Sales Invoice (PO Rate ₹58 Lock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2080, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/v1/invoices/draft-sync",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"dispatch_id\": \"{{ $node[\"2. FastAPI Intake Endpoint\"].json.dispatch_id }}\",\n  \"invoice_id\": \"{{ $json.invoice_id }}\",\n  \"selling_rate\": 58.0,\n  \"source\": \"{{ $node[\"2. FastAPI Intake Endpoint\"].json.source || 'WEB' }}\"\n}",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0011-4000-8000-000000000011a",
+      "name": "10a. Sync Web Application Output",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2320, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/v1/notifications/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"DRAFT_INVOICE_CREATED\",\n  \"message\": \"Draft Sales Invoice {{ $node[\"9. Create Draft Sales Invoice (PO Rate ₹58 Lock)\"].json.invoice_id }} created successfully in Zoho Books using Customer PO selling rate ₹58/kg in DRAFT status.\"\n}",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0011-4000-8000-000000000011b",
+      "name": "10b. Send Dual-Output WhatsApp & System Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2320, 260]
+    }
+  ],
+  "connections": {
+    "1a. Webhook Dispatch Intake (Web)": {
+      "main": [
+        [
+          {
+            "node": "2. FastAPI Intake Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1b. Twilio WhatsApp Webhook Intake": {
+      "main": [
+        [
+          {
+            "node": "2. FastAPI Intake Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. FastAPI Intake Endpoint": {
+      "main": [
+        [
+          {
+            "node": "3. Gemini Document OCR Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Gemini Document OCR Processing": {
+      "main": [
+        [
+          {
+            "node": "3b. Document Clear & Extracted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3b. Document Clear & Extracted?": {
+      "main": [
+        [
+          {
+            "node": "4. Cross-Document Validation Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "3c. Notify WhatsApp: The Document is Not Clear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Cross-Document Validation Engine": {
+      "main": [
+        [
+          {
+            "node": "5. Validation Passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Validation Passed?": {
+      "main": [
+        [
+          {
+            "node": "6. Admin Approval Gate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Failed - Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Admin Approval Gate": {
+      "main": [
+        [
+          {
+            "node": "7. Zoho Project Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Zoho Project Sync": {
+      "main": [
+        [
+          {
+            "node": "8. Prepare Purchase Bill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Prepare Purchase Bill": {
+      "main": [
+        [
+          {
+            "node": "9. Create Draft Sales Invoice (PO Rate ₹58 Lock)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9. Create Draft Sales Invoice (PO Rate ₹58 Lock)": {
+      "main": [
+        [
+          {
+            "node": "10a. Sync Web Application Output",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "10b. Send Dual-Output WhatsApp & System Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

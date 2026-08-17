@@ -1,0 +1,18 @@
+{
+  "vendor_name": "ABC Steel",
+  "bill_number": "INV-12345",
+  "bill_date": "2026-08-10",
+  "vehicle_number": "MH12AB1234",
+  "lr_number": "LR-16094",
+  "material": "HR Plate",
+  "grade": "IS 2062",
+  "size": "10x1500x6300",
+  "quantity": 12500,
+  "unit": "KG",
+  "purchase_rate": 50.00,
+  "taxable_amount": 625000.00,
+  "cgst": 56250.00,
+  "sgst": 56250.00,
+  "gst_rate": 18,
+  "total_amount": 737500.00
+}

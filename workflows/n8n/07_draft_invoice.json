@@ -1,0 +1,39 @@
+{
+  "name": "07_draft_invoice",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/api/v1/dispatches/{{ $json.dispatch_id }}/create-draft-invoice"
+      },
+      "name": "Create Zoho Draft Sales Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "09_notification"
+      },
+      "name": "Notify Accountant",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Create Zoho Draft Sales Invoice", "type": "main", "index": 0}]]
+    },
+    "Create Zoho Draft Sales Invoice": {
+      "main": [[{"node": "Notify Accountant", "type": "main", "index": 0}]]
+    }
+  }
+}

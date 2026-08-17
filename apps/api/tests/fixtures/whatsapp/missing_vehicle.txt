@@ -1,0 +1,7 @@
+Purchase From: ABC Steel
+Sale To: XYZ Industries
+Delivery As Per: PO-98765
+Grade: HR Plate
+Weight: 12500 KG
+Vehicle No:
+Driver: Ramesh
