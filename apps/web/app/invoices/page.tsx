@@ -14,7 +14,7 @@ interface DraftInvoiceItem {
   status: string;
   source: string;
   created_at: string;
-  zoho_sales_invoice_id?: str;
+  zoho_sales_invoice_id?: string;
 }
 
 export default function InvoicesPage() {
