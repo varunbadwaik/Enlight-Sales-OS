@@ -36,7 +36,7 @@ This guide details how to deploy **Enlight Sales OS** to any Linux Cloud Server 
 
 ### **Step 1: Clone Repository & Transfer Files**
 ```bash
-git clone https://github.com/your-org/enlight-sales-os.git /opt/enlight-sales-os
+git clone https://github.com/varunbadwaik/Enlight-Sales-OS.git /opt/enlight-sales-os
 cd /opt/enlight-sales-os
 ```
 
