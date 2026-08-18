@@ -395,23 +395,36 @@ async def create_purchase_bill(
 @app.post("/api/v1/dispatches/{dispatch_id}/create-draft-invoice", tags=["Zoho Integration"])
 async def create_draft_invoice_endpoint(
     dispatch_id: str,
-    selling_rate: float = 58.00,
+    selling_rate: Optional[float] = None,
+    payload: Optional[dict] = None,
     current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
     db: AsyncSession = Depends(get_db)
 ):
     dispatch = await resolve_dispatch(db, dispatch_id)
 
-    job_key = f"{dispatch.id}_CREATE_DRAFT_INVOICE_{selling_rate}"
+    # 1. Resolve rate: check query param -> check payload body -> check dispatch.selling_rate -> check global rate store
+    resolved_rate = None
+    if selling_rate is not None and selling_rate > 0:
+        resolved_rate = float(selling_rate)
+    elif payload and isinstance(payload, dict) and payload.get("selling_rate"):
+        resolved_rate = float(payload["selling_rate"])
+    elif dispatch.selling_rate:
+        resolved_rate = float(dispatch.selling_rate)
+
+    if not resolved_rate or resolved_rate <= 0:
+        resolved_rate = float(get_current_selling_rate())
+
+    # Update backend rate config store with user UI rate
+    set_current_selling_rate(resolved_rate)
+    po_selling_rate = Decimal(str(resolved_rate))
+    expected_quantity = dispatch.weight_kg or Decimal("12500")
+
+    job_key = f"{dispatch.id}_CREATE_DRAFT_INVOICE_{resolved_rate}"
     if job_key not in JOB_LOCKS:
         JOB_LOCKS[job_key] = asyncio.Lock()
 
     async with JOB_LOCKS[job_key]:
         await db.refresh(dispatch)
-
-        curr_global_rate = float(get_current_selling_rate())
-        effective_rate = selling_rate if selling_rate else curr_global_rate
-        po_selling_rate = Decimal(str(effective_rate))
-        expected_quantity = dispatch.weight_kg or Decimal("12500")
 
         try:
             if settings.ZOHO_REFRESH_TOKEN:

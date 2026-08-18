@@ -119,24 +119,6 @@ export default function OperationalDashboard() {
       await new Promise(r => setTimeout(r, 500));
       setAutoStatusMsg(`🎉 Success! Automation Pipeline Executed Cleanly. Created Dispatch ${newDispatchId} & Zoho Sales Draft Invoice #${newZohoInvId} @ ₹${rate}/kg!`);
 
-      // Save generated invoice to localStorage for instant visibility in /invoices page
-      const savedInvoices = JSON.parse(localStorage.getItem('user_created_invoices') || '[]');
-      const newInvRecord = {
-        invoice_id: newZohoInvId,
-        dispatch_id: newDispatchId,
-        customer_name: 'Jindal Steel Ltd',
-        po_number: 'PO-AUTO-2026',
-        selling_rate: `₹${numRate.toFixed(2)}/kg`,
-        weight_kg: '18,500 KG',
-        total_amount: `₹${(18500 * numRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-        status: 'DRAFT',
-        source: 'AUTOMATION',
-        created_at: new Date().toISOString(),
-        zoho_sales_invoice_id: newZohoInvId
-      };
-      localStorage.setItem('user_created_invoices', JSON.stringify([newInvRecord, ...savedInvoices]));
-      window.dispatchEvent(new Event('storage'));
-
       // Inject new automated dispatch into UI state
       setDispatches(prev => [
         {
@@ -145,7 +127,7 @@ export default function OperationalDashboard() {
           po_number: 'PO-AUTO-2026',
           vehicle_number: 'MH12 AB 9988',
           weight_kg: 18500,
-          selling_rate: numRate,
+          selling_rate: parseFloat(rate),
           status: 'DRAFT_INVOICE_CREATED',
           source: 'AUTOMATION',
           zoho_sales_invoice_id: newZohoInvId

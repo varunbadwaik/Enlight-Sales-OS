@@ -28,7 +28,6 @@ export default function InvoicesPage() {
 
     const handleRateUpdate = (e: any) => {
       setFixRate(e.detail || localStorage.getItem('fix_rate') || '58.00');
-      fetchInvoices();
     };
 
     window.addEventListener('fixRateChanged', handleRateUpdate);

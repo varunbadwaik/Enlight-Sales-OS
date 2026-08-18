@@ -20,8 +20,19 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
     const rateStr = localStorage.getItem('fix_rate') || '58.00';
     const currentRate = parseFloat(rateStr);
 
+    // Step 1: Input UI fix rate first & sync to backend FastAPI server
     try {
-      // Step 1: Call API to Approve Dispatch
+      await fetch('http://localhost:8000/api/v1/config/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selling_rate: currentRate })
+      });
+    } catch (e) {
+      console.warn('Could not sync rate config to backend:', e);
+    }
+
+    try {
+      // Step 2: Call API to Approve Dispatch
       await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Role': 'Admin' },
@@ -30,10 +41,11 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
 
       setApprovalDecision('APPROVED');
 
-      // Step 2: Call API to Create Draft Sales Invoice with active rate
+      // Step 3: Call API to Create Draft Sales Invoice with active rate
       const invoiceRes = await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/create-draft-invoice?selling_rate=${currentRate}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Role': 'Admin' },
+        body: JSON.stringify({ selling_rate: currentRate })
       }).catch(() => null);
 
       let invoiceData = null;
