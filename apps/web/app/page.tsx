@@ -205,7 +205,11 @@ export default function OperationalDashboard() {
                 <td>
                   {item.zoho_sales_invoice_id ? (
                     <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id}`}
+                      href={
+                        /^410\d{16}$/.test(String(item.zoho_sales_invoice_id))
+                          ? `https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id}`
+                          : `https://books.zoho.in/app/60082578964#/invoices?filter_by=Status.Draft`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-zoho"

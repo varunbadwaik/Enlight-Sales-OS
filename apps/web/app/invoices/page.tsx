@@ -81,9 +81,20 @@ export default function InvoicesPage() {
             Overview of live draft invoices generated in Zoho Books (Org: 60082578964). Selling rate strictly locked to Customer PO (₹{poRate}/kg).
           </p>
         </div>
-        <button onClick={fetchInvoices} className="btn-secondary">
-          🔄 Refresh Invoices
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <a
+            href="https://books.zoho.in/app/60082578964#/invoices?filter_by=Status.Draft"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary"
+            style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
+          >
+            🔗 Open Draft Invoices in Zoho
+          </a>
+          <button onClick={fetchInvoices} className="btn-secondary">
+            🔄 Refresh Invoices
+          </button>
+        </div>
       </div>
 
       {/* Statutory Banner */}
@@ -127,6 +138,11 @@ export default function InvoicesPage() {
           <tbody>
             {draftInvoices.map((item) => {
               const zohoId = item.zoho_sales_invoice_id || item.invoice_id;
+              const isRealZohoId = zohoId && /^410\d{16}$/.test(zohoId);
+              const targetZohoUrl = isRealZohoId
+                ? `https://books.zoho.in/app/60082578964#/invoices/${zohoId}`
+                : `https://books.zoho.in/app/60082578964#/invoices?filter_by=Status.Draft`;
+
               return (
                 <tr key={item.invoice_id}>
                   <td style={{ fontWeight: '800', color: '#2563EB', fontFamily: 'monospace' }}>
@@ -155,7 +171,7 @@ export default function InvoicesPage() {
                   </td>
                   <td>
                     <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${zohoId}`}
+                      href={targetZohoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-zoho"
