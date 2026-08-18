@@ -4,65 +4,12 @@ import Link from 'next/link';
 
 export default function ExceptionsPage() {
   const exceptions = [
-    {
-      lab_id: 'LAB-2026-984126',
-      dispatch_id: 'DSP-002',
-      customer: 'ABC Metals',
-      po_number: 'PO-44312',
-      type: 'Basic Metabolic Mismatch',
-      priority: 'Urgent',
-      description: 'Bill vehicle (MH12AB9999) does not match LR vehicle (MH12AB1234)',
-      severity: 'Critical View',
-      status_class: 'status-pill-rose',
-    },
-    {
-      lab_id: 'LAB-2026-984127',
-      dispatch_id: 'DSP-007',
-      customer: 'Delta Heavy',
-      po_number: 'PO-77889',
-      type: 'Weighment Variance Exceeded',
-      priority: 'Urgent',
-      description: 'Weighment variance (1.8%) exceeds maximum allowed threshold (1.0%)',
-      severity: 'Critical View',
-      status_class: 'status-pill-rose',
-    },
-    {
-      lab_id: 'LAB-2026-984128',
-      dispatch_id: 'DSP-012',
-      customer: 'Hassan Al-Rashid',
-      po_number: 'PO-99120',
-      type: 'Blood Cultures Variance',
-      priority: 'Urgent',
-      description: 'Required LR consignment note missing from uploaded payload',
-      severity: 'Critical View',
-      status_class: 'status-pill-rose',
-    },
-    {
-      lab_id: 'LAB-2026-984129',
-      dispatch_id: 'DSP-015',
-      customer: 'Marguerite Oai',
-      po_number: 'PO-55102',
-      type: 'HbA1c Discrepancy',
-      priority: 'Routine',
-      description: 'Unit selling rate discrepancy flagged for operator review',
-      severity: 'Resulted',
-      status_class: 'status-pill-blue',
-    },
-    {
-      lab_id: 'LAB-2026-984130',
-      dispatch_id: 'DSP-018',
-      customer: 'Kojo Mensah',
-      po_number: 'PO-33410',
-      type: 'Electrolyte Panel Audit',
-      priority: 'Routine',
-      description: 'Automatic weighbridge tolerance auto-resolved within 0.2%',
-      severity: 'Resulted',
-      status_class: 'status-pill-blue',
-    },
+    { dispatch_id: 'DSP-002', customer: 'ABC Metals', po_number: 'PO-44312', type: 'VEHICLE_MISMATCH', description: 'Bill vehicle (MH12AB9999) does not match LR vehicle (MH12AB1234)', severity: 'HIGH' },
+    { dispatch_id: 'DSP-007', customer: 'Delta Heavy', po_number: 'PO-77889', type: 'WEIGHT_TOLERANCE_EXCEEDED', description: 'Weighment variance (1.8%) exceeds maximum allowed threshold (1.0%)', severity: 'HIGH' },
   ];
 
   const getInitials = (name: string) => {
-    if (!name) return 'EX';
+    if (!name) return 'DS';
     const parts = name.split(' ');
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
@@ -73,14 +20,12 @@ export default function ExceptionsPage() {
       {/* Page Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">Lab Requests / Exceptions</h1>
+          <h1 className="page-title">Lab Requests & Exceptions</h1>
           <p className="page-subtitle">
-            Cross-document discrepancies flagged by the validation engine. Results appear once approved and resolved.
+            Cross-document discrepancies flagged by the validation engine. Requires operator review before Zoho invoice generation.
           </p>
         </div>
-        <button className="btn-primary-dark">
-          + Request a Test
-        </button>
+        <button className="btn-primary-dark">+ Request Re-Scan</button>
       </div>
 
       {/* Filter & Search Bar */}
@@ -90,10 +35,10 @@ export default function ExceptionsPage() {
           <input type="text" placeholder="Name or ID..." readOnly />
         </div>
         <div className="filter-pills-group">
-          <button className="filter-pill active">All</button>
+          <button className="filter-pill active">All Exceptions</button>
           <button className="filter-pill">Critical Value</button>
-          <button className="filter-pill">Resulted</button>
-          <button className="filter-pill">Received</button>
+          <button className="filter-pill">Vehicle Mismatch</button>
+          <button className="filter-pill">Weight Variance</button>
         </div>
       </div>
 
@@ -102,11 +47,12 @@ export default function ExceptionsPage() {
         <table className="clinical-table">
           <thead>
             <tr>
-              <th>LAB ID</th>
-              <th>PATIENT / CUSTOMER</th>
-              <th>TEST NAME / EXCEPTION</th>
-              <th>PRIORITY</th>
-              <th>STATUS</th>
+              <th>DISPATCH ID</th>
+              <th>CUSTOMER NAME</th>
+              <th>PO NUMBER</th>
+              <th>EXCEPTION TYPE</th>
+              <th>DISCREPANCY DETAILS</th>
+              <th>SEVERITY</th>
               <th style={{ textAlign: 'right' }}>ACTION</th>
             </tr>
           </thead>
@@ -115,36 +61,42 @@ export default function ExceptionsPage() {
               const initials = getInitials(item.customer);
 
               return (
-                <tr key={item.lab_id}>
+                <tr key={item.dispatch_id}>
                   <td style={{ fontWeight: '700', color: '#0F172A' }}>
                     <Link href={`/dispatches/${item.dispatch_id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                      {item.lab_id}
+                      {item.dispatch_id}
                     </Link>
                   </td>
                   <td>
                     <div className="customer-avatar-row">
                       <div className="customer-avatar-circle">{initials}</div>
-                      <div>
-                        <div style={{ fontWeight: '600', color: '#0F172A' }}>{item.customer}</div>
-                        <div style={{ fontSize: '11px', color: '#64748B' }}>{item.po_number} • {item.dispatch_id}</div>
-                      </div>
+                      <span style={{ fontWeight: '600', color: '#0F172A' }}>{item.customer}</span>
                     </div>
                   </td>
-                  <td style={{ color: '#334155', fontWeight: '500' }}>
-                    <div>{item.type}</div>
-                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>{item.description}</div>
+                  <td style={{ color: '#475569', fontWeight: '500' }}>{item.po_number}</td>
+                  <td>
+                    <span className="status-pill status-pill-rose">
+                      • {item.type}
+                    </span>
                   </td>
-                  <td style={{ color: item.priority === 'Urgent' ? '#9F1239' : '#475569', fontWeight: '600' }}>
-                    {item.priority}
+                  <td style={{ color: '#475569', fontSize: '12px', maxWidth: '320px', lineHeight: '1.4' }}>
+                    {item.description}
                   </td>
                   <td>
-                    <span className={`status-pill ${item.status_class}`}>
-                      • {item.severity}
+                    <span style={{ color: '#BE123C', fontWeight: '800', fontSize: '11px', textTransform: 'uppercase' }}>
+                      ● {item.severity}
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <Link href={`/dispatches/${item.dispatch_id}`} style={{ color: '#94A3B8', textDecoration: 'none', fontWeight: '800' }}>
-                      ···
+                    <Link
+                      href={`/dispatches/${item.dispatch_id}`}
+                      style={{
+                        color: '#0F172A', textDecoration: 'none', fontWeight: '700',
+                        fontSize: '12px', background: '#F1F5F9', padding: '6px 12px',
+                        borderRadius: '6px', border: '1px solid #CBD5E1'
+                      }}
+                    >
+                      Resolve →
                     </Link>
                   </td>
                 </tr>
