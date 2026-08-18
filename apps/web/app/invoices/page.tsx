@@ -20,8 +20,26 @@ interface DraftInvoiceItem {
 export default function InvoicesPage() {
   const [draftInvoices, setDraftInvoices] = useState<DraftInvoiceItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fixRate, setFixRate] = useState<string>('58.00');
+
+  useEffect(() => {
+    const savedRate = typeof window !== 'undefined' ? (localStorage.getItem('fix_rate') || '58.00') : '58.00';
+    setFixRate(savedRate);
+
+    const handleRateUpdate = (e: any) => {
+      setFixRate(e.detail || localStorage.getItem('fix_rate') || '58.00');
+    };
+
+    window.addEventListener('fixRateChanged', handleRateUpdate);
+    window.addEventListener('storage', handleRateUpdate);
+    return () => {
+      window.removeEventListener('fixRateChanged', handleRateUpdate);
+      window.removeEventListener('storage', handleRateUpdate);
+    };
+  }, []);
 
   const fetchInvoices = async () => {
+    const rate = localStorage.getItem('fix_rate') || '58.00';
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const headers: Record<string, string> = { 
@@ -36,16 +54,16 @@ export default function InvoicesPage() {
         setDraftInvoices(data);
       } else {
         setDraftInvoices([
-          { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: '₹58.00/kg', weight_kg: '12,500 KG', total_amount: '₹7,25,000.00', status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
-          { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: '₹58.00/kg', weight_kg: '10 KG', total_amount: '₹580.00', status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
-          { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: '₹58.00/kg', weight_kg: '25,000 KG', total_amount: '₹14,50,000.00', status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
+          { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: `₹${rate}/kg`, weight_kg: '12,500 KG', total_amount: `₹${(12500 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
+          { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: `₹${rate}/kg`, weight_kg: '10 KG', total_amount: `₹${(10 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
+          { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: `₹${rate}/kg`, weight_kg: '25,000 KG', total_amount: `₹${(25000 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
         ]);
       }
     } catch {
       setDraftInvoices([
-        { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: '₹58.00/kg', weight_kg: '12,500 KG', total_amount: '₹7,25,000.00', status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
-        { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: '₹58.00/kg', weight_kg: '10 KG', total_amount: '₹580.00', status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
-        { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: '₹58.00/kg', weight_kg: '25,000 KG', total_amount: '₹14,50,000.00', status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
+        { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: `₹${rate}/kg`, weight_kg: '12,500 KG', total_amount: `₹${(12500 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
+        { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: `₹${rate}/kg`, weight_kg: '10 KG', total_amount: `₹${(10 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
+        { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: `₹${rate}/kg`, weight_kg: '25,000 KG', total_amount: `₹${(25000 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
       ]);
     } finally {
       setLoading(false);
@@ -56,7 +74,7 @@ export default function InvoicesPage() {
     fetchInvoices();
     const interval = setInterval(fetchInvoices, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fixRate]);
 
   const getInitials = (name: string) => {
     if (!name) return 'DS';
@@ -70,9 +88,9 @@ export default function InvoicesPage() {
       {/* Page Header */}
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">Prescriptions</h1>
+          <h1 className="page-title">Prescriptions & Draft Invoices</h1>
           <p className="page-subtitle">
-            13 on the register — every draft sales invoice created in Zoho Books (Org: 60082578964) is logged on the audit trail.
+            Every draft invoice created in Zoho Books (Org: 60082578964) locked at PO Rate (₹{fixRate}/kg).
           </p>
         </div>
         <button onClick={fetchInvoices} className="btn-primary-dark">
@@ -134,7 +152,7 @@ export default function InvoicesPage() {
                     {item.po_number} ({item.weight_kg})
                   </td>
                   <td style={{ color: '#475569' }}>
-                    {item.selling_rate} — Total: {item.total_amount}
+                    ₹{fixRate}/kg — Total: {item.total_amount}
                   </td>
                   <td>
                     <span className="status-pill status-pill-blue">

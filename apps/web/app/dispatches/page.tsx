@@ -4,12 +4,24 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function DispatchesPage() {
-  const [dispatches, setDispatches] = useState<any[]>([
-    { dispatch_id: 'DSP-001', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12 AB 1234', weight: '12,500 KG', rate: '₹58.00/kg', status: 'VALIDATED' },
-    { dispatch_id: 'DSP-002', customer: 'ABC Metals', po_number: 'PO-44312', vehicle: 'MH12 AB 9999', weight: '15,000 KG', rate: '₹62.00/kg', status: 'VALIDATION_REQUIRED' },
-    { dispatch_id: 'DSP-003', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12 AB 1234', weight: '12,500 KG', rate: '₹58.00/kg', status: 'DRAFT_INVOICE_CREATED' },
-    { dispatch_id: 'DSP-004', customer: 'Apex Metals', po_number: 'PO-11223', vehicle: 'MH14 XY 9999', weight: '10,000 KG', rate: '₹55.00/kg', status: 'PENDING_APPROVAL' },
-  ]);
+  const [fixRate, setFixRate] = useState<string>('58.00');
+  const [dispatches, setDispatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    const savedRate = typeof window !== 'undefined' ? (localStorage.getItem('fix_rate') || '58.00') : '58.00';
+    setFixRate(savedRate);
+
+    const handleRateUpdate = (e: any) => {
+      setFixRate(e.detail || localStorage.getItem('fix_rate') || '58.00');
+    };
+
+    window.addEventListener('fixRateChanged', handleRateUpdate);
+    window.addEventListener('storage', handleRateUpdate);
+    return () => {
+      window.removeEventListener('fixRateChanged', handleRateUpdate);
+      window.removeEventListener('storage', handleRateUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     fetch('http://localhost:8000/api/v1/dispatches')
@@ -22,17 +34,26 @@ export default function DispatchesPage() {
             po_number: d.po_number || 'PO-98765',
             vehicle: d.vehicle_number || 'MH12 AB 1234',
             weight: `${(d.weight_kg || 12500).toLocaleString()} KG`,
-            rate: `₹${(d.selling_rate || 58.0).toFixed(2)}/kg`,
             status: d.status,
           }));
-          setDispatches((prev) => {
-            const existingIds = new Set(prev.map(p => p.dispatch_id));
-            const newItems = fetched.filter((f: any) => !existingIds.has(f.dispatch_id));
-            return [...newItems, ...prev];
-          });
+          setDispatches(fetched);
+        } else {
+          setDispatches([
+            { dispatch_id: 'DSP-001', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12 AB 1234', weight: '12,500 KG', status: 'VALIDATED' },
+            { dispatch_id: 'DSP-002', customer: 'ABC Metals', po_number: 'PO-44312', vehicle: 'MH12 AB 9999', weight: '15,000 KG', status: 'VALIDATION_REQUIRED' },
+            { dispatch_id: 'DSP-003', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12 AB 1234', weight: '12,500 KG', status: 'DRAFT_INVOICE_CREATED' },
+            { dispatch_id: 'DSP-004', customer: 'Apex Metals', po_number: 'PO-11223', vehicle: 'MH14 XY 9999', weight: '10,000 KG', status: 'PENDING_APPROVAL' },
+          ]);
         }
       })
-      .catch((err) => console.log('API Dispatches Fetch Fallback:', err));
+      .catch(() => {
+        setDispatches([
+          { dispatch_id: 'DSP-001', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12 AB 1234', weight: '12,500 KG', status: 'VALIDATED' },
+          { dispatch_id: 'DSP-002', customer: 'ABC Metals', po_number: 'PO-44312', vehicle: 'MH12 AB 9999', weight: '15,000 KG', status: 'VALIDATION_REQUIRED' },
+          { dispatch_id: 'DSP-003', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12 AB 1234', weight: '12,500 KG', status: 'DRAFT_INVOICE_CREATED' },
+          { dispatch_id: 'DSP-004', customer: 'Apex Metals', po_number: 'PO-11223', vehicle: 'MH14 XY 9999', weight: '10,000 KG', status: 'PENDING_APPROVAL' },
+        ]);
+      });
   }, []);
 
   const getInitials = (name: string) => {
@@ -49,7 +70,7 @@ export default function DispatchesPage() {
         <div>
           <h1 className="page-title">Dispatches</h1>
           <p className="page-subtitle">
-            Track end-to-end dispatch lifecycles from weighbridge intake to Zoho sales invoice creation.
+            Track end-to-end dispatch lifecycles from weighbridge intake to Zoho sales invoice creation (Rate: ₹{fixRate}/kg).
           </p>
         </div>
         <button className="btn-primary-dark">+ New Dispatch</button>
@@ -120,7 +141,7 @@ export default function DispatchesPage() {
                   <td style={{ color: '#475569', fontWeight: '500' }}>{item.po_number}</td>
                   <td style={{ color: '#475569' }}>{item.vehicle}</td>
                   <td style={{ color: '#475569' }}>{item.weight}</td>
-                  <td style={{ fontWeight: '700', color: '#0F172A' }}>{item.rate}</td>
+                  <td style={{ fontWeight: '700', color: '#0F172A' }}>₹{fixRate}/kg</td>
                   <td>
                     <span className={`status-pill ${statusClass}`}>
                       {statusLabel}

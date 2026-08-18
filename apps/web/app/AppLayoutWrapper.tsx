@@ -23,12 +23,30 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
   const [isEditingRate, setIsEditingRate] = useState<boolean>(false);
   const [tempRate, setTempRate] = useState<string>('58.00');
 
+  // Load and listen to Rate Lock changes globally
+  useEffect(() => {
+    const savedRate = typeof window !== 'undefined' ? (localStorage.getItem('fix_rate') || '58.00') : '58.00';
+    setFixRate(savedRate);
+    setTempRate(savedRate);
+
+    const handleRateUpdate = (e: any) => {
+      const newRate = e.detail || localStorage.getItem('fix_rate') || '58.00';
+      setFixRate(newRate);
+      setTempRate(newRate);
+    };
+
+    window.addEventListener('fixRateChanged', handleRateUpdate);
+    window.addEventListener('storage', handleRateUpdate);
+    return () => {
+      window.removeEventListener('fixRateChanged', handleRateUpdate);
+      window.removeEventListener('storage', handleRateUpdate);
+    };
+  }, []);
+
+  // Auth check
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    const savedRate = localStorage.getItem('fix_rate') || '58.00';
-    setFixRate(savedRate);
-    setTempRate(savedRate);
 
     if (!token || !userData) {
       if (!isLoginPage) {
@@ -60,7 +78,7 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     setFixRate(formatted);
     localStorage.setItem('fix_rate', formatted);
     setIsEditingRate(false);
-    // Dispatch custom event to notify open page views
+    // Dispatch custom event to notify open page views and sidebar components
     window.dispatchEvent(new CustomEvent('fixRateChanged', { detail: formatted }));
   };
 
