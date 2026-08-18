@@ -18,9 +18,17 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
   const [user, setUser] = useState<UserInfo | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
+  // Rate Lock State
+  const [fixRate, setFixRate] = useState<string>('58.00');
+  const [isEditingRate, setIsEditingRate] = useState<boolean>(false);
+  const [tempRate, setTempRate] = useState<string>('58.00');
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+    const savedRate = localStorage.getItem('fix_rate') || '58.00';
+    setFixRate(savedRate);
+    setTempRate(savedRate);
 
     if (!token || !userData) {
       if (!isLoginPage) {
@@ -41,6 +49,20 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     }
     setAuthChecked(true);
   }, [isLoginPage, router]);
+
+  const handleSaveRate = () => {
+    const num = parseFloat(tempRate);
+    if (isNaN(num) || num <= 0) {
+      alert('Please enter a valid positive rate.');
+      return;
+    }
+    const formatted = num.toFixed(2);
+    setFixRate(formatted);
+    localStorage.setItem('fix_rate', formatted);
+    setIsEditingRate(false);
+    // Dispatch custom event to notify open page views
+    window.dispatchEvent(new CustomEvent('fixRateChanged', { detail: formatted }));
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -133,12 +155,67 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
           </Link>
         </nav>
 
-        {/* Statutory Alert Banner */}
+        {/* Settings & Configuration Section */}
+        <div className="nav-section-label">CONFIGURATION</div>
+        <nav className="nav-menu">
+          <button
+            type="button"
+            onClick={() => setIsEditingRate(true)}
+            className="nav-item"
+            style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}
+          >
+            <span>⚙️</span> Change Fix Rate (₹{fixRate}/kg)
+          </button>
+        </nav>
+
+        {/* Statutory Alert Banner with Edit Rate Controls */}
         <div className="statutory-alert-banner">
-          <div style={{ fontWeight: '700', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>⚠️</span> Statutory Rule: Rate Lock
+          <div style={{ fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>⚠️</span> Statutory Rule: Rate Lock
+            </div>
+            <button
+              onClick={() => setIsEditingRate(!isEditingRate)}
+              style={{
+                background: '#0F172A', color: '#FFFFFF', border: 'none', borderRadius: '4px',
+                padding: '2px 6px', fontSize: '10px', fontWeight: '700', cursor: 'pointer'
+              }}
+            >
+              {isEditingRate ? 'Close' : '✏️ Change'}
+            </button>
           </div>
-          Locked at Customer PO rate ₹58.00/kg. Status = DRAFT only.
+
+          {isEditingRate ? (
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10px', fontWeight: '700', color: '#9F1239' }}>Set New Fix Rate (₹/kg):</label>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={tempRate}
+                  onChange={(e) => setTempRate(e.target.value)}
+                  style={{
+                    flex: 1, padding: '4px 6px', fontSize: '11px', borderRadius: '4px',
+                    border: '1px solid #FDA4AF', outline: 'none', fontWeight: '700'
+                  }}
+                />
+                <button
+                  onClick={handleSaveRate}
+                  style={{
+                    backgroundColor: '#0F172A', color: '#FFFFFF', border: 'none',
+                    borderRadius: '4px', padding: '4px 8px', fontSize: '10px', fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              Locked at Customer PO rate <strong style={{ color: '#0F172A', textDecoration: 'underline' }}>₹{fixRate}/kg</strong>. Status = DRAFT only.
+            </div>
+          )}
         </div>
 
         {/* Sidebar User Card */}
