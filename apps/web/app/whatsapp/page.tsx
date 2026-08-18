@@ -75,10 +75,15 @@ Dispatch      : 12-08-2026`
     try {
       const res = await fetch('http://localhost:8000/api/v1/whatsapp/agent/webhook', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Fix-Rate': savedRate
+        },
         body: new URLSearchParams({
           From: 'whatsapp:+917588353703',
-          Body: testMessage
+          Body: testMessage,
+          SellingRate: savedRate,
+          FixRate: savedRate
         })
       });
 
