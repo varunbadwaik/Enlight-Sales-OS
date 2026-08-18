@@ -58,12 +58,12 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        minHeight: '100vh', background: '#090D16', color: '#94A3B8',
-        fontFamily: 'Inter, sans-serif', fontSize: '14px', gap: '12px'
+        minHeight: '100vh', background: '#F4F5F7', color: '#64748B',
+        fontFamily: 'Inter, sans-serif', fontSize: '13px', gap: '10px'
       }}>
         <span style={{
-          width: '22px', height: '22px', border: '2px solid rgba(148,163,184,0.3)',
-          borderTopColor: '#3B82F6', borderRadius: '50%',
+          width: '18px', height: '18px', border: '2px solid #CBD5E1',
+          borderTopColor: '#0F172A', borderRadius: '50%',
           display: 'inline-block', animation: 'spin 0.8s linear infinite'
         }} />
         Connecting to Enlight Sales OS...
@@ -71,67 +71,91 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     );
   }
 
-  const roleBadgeColor = user.role === 'Admin' ? '#3B82F6' : user.role === 'Accountant' ? '#8B5CF6' : '#10B981';
+  // Compute breadcrumb path
+  const getBreadcrumbs = () => {
+    if (pathname === '/') return { section: 'OVERVIEW', page: 'Today' };
+    if (pathname?.startsWith('/dispatches')) return { section: 'CONSULTING ROOM', page: 'Dispatches' };
+    if (pathname === '/approvals') return { section: 'CARE', page: 'Approvals Queue' };
+    if (pathname === '/invoices') return { section: 'CARE', page: 'Prescriptions / Zoho Invoices' };
+    if (pathname === '/exceptions') return { section: 'CONSULTING ROOM', page: 'Lab Requests / Discrepancies' };
+    if (pathname === '/whatsapp') return { section: 'CONSULTING ROOM', page: 'WhatsApp AI Agent' };
+    return { section: 'CONSULTING ROOM', page: 'Dashboard' };
+  };
+
+  const breadcrumbs = getBreadcrumbs();
 
   return (
     <div className="app-container">
       {/* Sidebar Navigation */}
       <aside className="sidebar">
-        {/* Brand Logo & Tagline */}
-        <div>
-          <div className="brand-logo">
-            <div className="brand-icon">⚡</div>
-            <span>Enlight Metals</span>
-            <span className="brand-badge">V1.0</span>
+        {/* Brand Header */}
+        <div className="brand-header">
+          <div className="brand-logo-icon">⚡</div>
+          <div>
+            <div className="brand-title">Enlight Metals</div>
           </div>
-          <p className="brand-tagline">Zoho Draft Invoice OS</p>
         </div>
 
-        {/* Navigation Menu */}
+        {/* Overview Section */}
+        <div className="nav-section-label">OVERVIEW</div>
         <nav className="nav-menu">
           <Link href="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
-            <span style={{ fontSize: '18px' }}>📊</span> Dashboard
+            <span>📊</span> Today
           </Link>
-          <Link href="/dispatches" className={`nav-item ${pathname?.startsWith('/dispatches') ? 'active' : ''}`}>
-            <span style={{ fontSize: '18px' }}>🚚</span> Dispatches
-          </Link>
+        </nav>
+
+        {/* Care & Processing Section */}
+        <div className="nav-section-label">CARE</div>
+        <nav className="nav-menu">
           <Link href="/approvals" className={`nav-item ${pathname === '/approvals' ? 'active' : ''}`}>
-            <span style={{ fontSize: '18px' }}>⏳</span> Approvals Queue
+            <span>⏳</span> Approvals Queue
           </Link>
           <Link href="/invoices" className={`nav-item ${pathname === '/invoices' ? 'active' : ''}`}>
-            <span style={{ fontSize: '18px' }}>📑</span> Zoho Draft Invoices
+            <span>📑</span> Prescriptions & Invoices
+          </Link>
+        </nav>
+
+        {/* Consulting Room / Sales Ops Section */}
+        <div className="nav-section-label">CONSULTING ROOM</div>
+        <nav className="nav-menu">
+          <Link href="/dispatches" className={`nav-item ${pathname?.startsWith('/dispatches') ? 'active' : ''}`}>
+            <span>🚚</span> My Schedule & Dispatches
           </Link>
           <Link href="/exceptions" className={`nav-item ${pathname === '/exceptions' ? 'active' : ''}`}>
-            <span style={{ fontSize: '18px' }}>⚠️</span> Discrepancies
+            <span>🔬</span> Lab Requests & Exceptions
           </Link>
           <Link href="/whatsapp" className={`nav-item ${pathname === '/whatsapp' ? 'active' : ''}`}>
-            <span style={{ fontSize: '18px' }}>💬</span> WhatsApp Agent
+            <span>💬</span> WhatsApp AI Intake
             <span style={{
-              marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%',
-              backgroundColor: '#10B981', boxShadow: '0 0 8px #10B981'
+              marginLeft: 'auto', width: '6px', height: '6px', borderRadius: '50%',
+              backgroundColor: '#10B981', boxShadow: '0 0 6px #10B981'
             }} />
           </Link>
         </nav>
 
-        {/* User Profile Card */}
-        <div style={{
-          marginTop: '24px', background: 'rgba(255, 255, 255, 0.04)',
-          border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px',
-          padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Statutory Alert Banner */}
+        <div className="statutory-alert-banner">
+          <div style={{ fontWeight: '700', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>⚠️</span> Statutory Rule: Rate Lock
+          </div>
+          Locked at Customer PO rate ₹58.00/kg. Status = DRAFT only.
+        </div>
+
+        {/* Sidebar User Card */}
+        <div className="sidebar-user-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
-              width: '34px', height: '34px', borderRadius: '50%',
-              backgroundColor: roleBadgeColor, color: '#FFF', fontWeight: '800',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
+              width: '28px', height: '28px', borderRadius: '50%',
+              backgroundColor: '#0F172A', color: '#FFFFFF', fontWeight: '700',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px'
             }}>
               {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#F8FAFC' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#0F172A' }}>
                 {user.full_name}
               </div>
-              <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '600' }}>
+              <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '500' }}>
                 {user.role}
               </div>
             </div>
@@ -140,30 +164,43 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
             onClick={handleLogout}
             title="Sign Out"
             style={{
-              background: 'transparent', border: 'none', color: '#64748B',
-              cursor: 'pointer', fontSize: '16px', padding: '4px',
-              transition: 'color 0.2s ease'
+              background: 'transparent', border: 'none', color: '#94A3B8',
+              cursor: 'pointer', fontSize: '14px', padding: '2px',
+              transition: 'color 0.15s ease'
             }}
             onMouseOver={(e) => (e.currentTarget.style.color = '#EF4444')}
-            onMouseOut={(e) => (e.currentTarget.style.color = '#64748B')}
+            onMouseOut={(e) => (e.currentTarget.style.color = '#94A3B8')}
           >
             🚪
           </button>
         </div>
-
-        {/* Statutory Protection Banner */}
-        <div className="statutory-card" style={{ marginTop: '16px' }}>
-          <div className="statutory-title">
-            <span>🛡️</span> Statutory Rule
-          </div>
-          Draft invoices locked at Customer PO rate (₹58.00/kg). Status = DRAFT only.
-        </div>
       </aside>
 
       {/* Main Content Viewport */}
-      <main className="main-content">
-        {children}
-      </main>
+      <div className="main-viewport">
+        {/* Top Header Bar */}
+        <header className="top-nav-bar">
+          <div className="breadcrumb-trail">
+            <span>{breadcrumbs.section}</span>
+            <span style={{ color: '#CBD5E1' }}>❯</span>
+            <span style={{ color: '#0F172A' }}>{breadcrumbs.page}</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="top-search-box">
+              <span>🔍</span>
+              <input type="text" placeholder="Go to..." readOnly />
+              <span className="top-search-badge">⌘K</span>
+            </div>
+            <span style={{ fontSize: '14px', color: '#64748B', cursor: 'pointer' }}>🔔</span>
+          </div>
+        </header>
+
+        {/* Page Content Body */}
+        <main className="content-body">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
