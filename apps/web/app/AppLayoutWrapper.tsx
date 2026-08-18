@@ -164,56 +164,75 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
             className="nav-item"
             style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}
           >
-            <span>⚙️</span> Change Fix Rate (₹{fixRate}/kg)
+            <span>⚙️</span> PO Rate Lock: <strong>₹{fixRate}/kg</strong>
           </button>
         </nav>
 
-        {/* Statutory Alert Banner with Edit Rate Controls */}
+        {/* Statutory Alert Banner */}
         <div className="statutory-alert-banner">
-          <div style={{ fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>⚠️</span> Statutory Rule: Rate Lock
-            </div>
-            <button
-              onClick={() => setIsEditingRate(!isEditingRate)}
-              style={{
-                background: '#0F172A', color: '#FFFFFF', border: 'none', borderRadius: '4px',
-                padding: '2px 6px', fontSize: '10px', fontWeight: '700', cursor: 'pointer'
-              }}
-            >
-              {isEditingRate ? 'Close' : '✏️ Change'}
-            </button>
-          </div>
-
           {isEditingRate ? (
-            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '10px', fontWeight: '700', color: '#9F1239' }}>Set New Fix Rate (₹/kg):</label>
-              <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontWeight: '700', fontSize: '11px', color: '#9F1239', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>✏️ Set Fixed PO Selling Rate</span>
+              </div>
+              <div>
+                <label style={{ fontSize: '10px', color: '#9F1239', display: 'block', marginBottom: '3px', fontWeight: '600' }}>
+                  Rate (₹ / kg):
+                </label>
                 <input
                   type="number"
                   step="0.01"
                   value={tempRate}
                   onChange={(e) => setTempRate(e.target.value)}
                   style={{
-                    flex: 1, padding: '4px 6px', fontSize: '11px', borderRadius: '4px',
-                    border: '1px solid #FDA4AF', outline: 'none', fontWeight: '700'
+                    width: '100%', padding: '6px 8px', fontSize: '12px', borderRadius: '6px',
+                    border: '1px solid #FDA4AF', outline: 'none', fontWeight: '700',
+                    boxSizing: 'border-box', backgroundColor: '#FFFFFF', color: '#0F172A'
                   }}
                 />
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
                 <button
                   onClick={handleSaveRate}
                   style={{
-                    backgroundColor: '#0F172A', color: '#FFFFFF', border: 'none',
-                    borderRadius: '4px', padding: '4px 8px', fontSize: '10px', fontWeight: '700',
+                    flex: 1, backgroundColor: '#0F172A', color: '#FFFFFF', border: 'none',
+                    borderRadius: '6px', padding: '6px 0', fontSize: '11px', fontWeight: '700',
+                    cursor: 'pointer', textAlign: 'center'
+                  }}
+                >
+                  Save Rate
+                </button>
+                <button
+                  onClick={() => setIsEditingRate(false)}
+                  style={{
+                    backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1',
+                    borderRadius: '6px', padding: '6px 10px', fontSize: '11px', fontWeight: '600',
                     cursor: 'pointer'
                   }}
                 >
-                  Save
+                  Cancel
                 </button>
               </div>
             </div>
           ) : (
             <div>
-              Locked at Customer PO rate <strong style={{ color: '#0F172A', textDecoration: 'underline' }}>₹{fixRate}/kg</strong>. Status = DRAFT only.
+              <div style={{ fontWeight: '700', marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⚠️</span> Statutory Rule: Rate Lock
+                </div>
+                <button
+                  onClick={() => setIsEditingRate(true)}
+                  style={{
+                    background: '#9F1239', color: '#FFFFFF', border: 'none', borderRadius: '4px',
+                    padding: '2px 6px', fontSize: '10px', fontWeight: '700', cursor: 'pointer'
+                  }}
+                >
+                  Edit
+                </button>
+              </div>
+              <div>
+                Locked at Customer PO rate <strong style={{ color: '#0F172A', textDecoration: 'underline' }}>₹{fixRate}/kg</strong>. Status = DRAFT only.
+              </div>
             </div>
           )}
         </div>
