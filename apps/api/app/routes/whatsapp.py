@@ -18,6 +18,7 @@ from app.services.classifier import classifier
 from app.services.twilio_service import twilio_service
 from app.services.validator import validator_engine
 from app.integrations.zoho.sales_invoices import zoho_sales_invoice_adapter
+from app.config_rate import get_current_selling_rate
 
 logger = logging.getLogger(__name__)
 
@@ -157,19 +158,17 @@ async def whatsapp_agent_webhook(
             logger.warning(f"Gemini AI text parsing warning: {e}")
 
         # Extract dynamic fields from Gemini AI JSON (with regex fallback)
-        rate_match = (
-            re.search(r'Rate\s*(?:\(₹/kg\))?:\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE) or 
-            re.search(r'Price:\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE) or
-            re.search(r'Selling Rate:\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE)
-        )
+        cust_match = (re.search(r'Sale To:\s*([^\n\r]+)', text_content, re.IGNORECASE) or re.search(r'Customer:\s*([^\n\r]+)', text_content, re.IGNORECASE))
+        veh_match = (re.search(r'Vehicle\s*(?:No)?:\s*([A-Za-z0-9\s]+?)(?=\s+Driver|\s+Transport|\n|\r|$)', text_content, re.IGNORECASE) or re.search(r'Vehicle:\s*([A-Za-z0-9\s]+)', text_content, re.IGNORECASE))
+        wt_match = re.search(r'Weight(?:\s*kg)?:\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE)
+        grade_match = re.search(r'Grade:\s*([^\n\r]+)', text_content, re.IGNORECASE)
+        size_match = re.search(r'Size:\s*([^\n\r]+)', text_content, re.IGNORECASE)
+        lr_match = re.search(r'Transport:\s*([^\n\r]+)', text_content, re.IGNORECASE)
 
         parsed_po = po_number_found or session.po_number or "PO-98765"
         parsed_customer = gemini_parsed.get("sale_to") or (cust_match.group(1).strip() if cust_match else "Tata Steel Ltd")
         parsed_vehicle = gemini_parsed.get("vehicle_number") or (veh_match.group(1).strip() if veh_match else "KA01 XY 9999")
-        parsed_weight = Decimal(str(gemini_parsed.get("weight_kg"))) if gemini_parsed.get("weight_kg") else (Decimal(wt_match.group(1).strip()) if wt_match else Decimal("10"))
-
-        from app.services.rate_store import rate_store
-        parsed_rate = Decimal(rate_match.group(1).strip()) if rate_match else rate_store.get_rate()
+        parsed_weight = Decimal(str(gemini_parsed.get("weight_kg"))) if gemini_parsed.get("weight_kg") else (Decimal(wt_match.group(1).strip()) if wt_match else Decimal("1"))
 
         m_grade = gemini_parsed.get("grade") or (grade_match.group(1).strip() if grade_match else "")
         m_size = gemini_parsed.get("size") or (size_match.group(1).strip() if size_match else "")
@@ -177,6 +176,7 @@ async def whatsapp_agent_webhook(
         parsed_lr = gemini_parsed.get("transporter") or (lr_match.group(1).strip() if lr_match else "VRL Logistics")
 
         # Create Dispatch record with source="WHATSAPP"
+        current_rate = get_current_selling_rate()
         dispatch = await crud.create_dispatch(
             db=db,
             po_number=parsed_po,
@@ -186,7 +186,7 @@ async def whatsapp_agent_webhook(
             customer_name=parsed_customer,
             vehicle_number=parsed_vehicle,
             weight_kg=parsed_weight,
-            selling_rate=parsed_rate,
+            selling_rate=current_rate,
             purchase_rate=Decimal("50.00"),
             source="WHATSAPP"
         )
@@ -200,7 +200,7 @@ async def whatsapp_agent_webhook(
                 customer_id=None,
                 customer_name=parsed_customer,
                 po_number=parsed_po,
-                customer_po_selling_rate=parsed_rate,
+                customer_po_selling_rate=current_rate,
                 quantity=parsed_weight,
                 material=parsed_material,
                 vehicle_number=parsed_vehicle,

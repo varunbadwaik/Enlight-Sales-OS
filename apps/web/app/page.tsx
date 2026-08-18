@@ -66,6 +66,19 @@ export default function OperationalDashboard() {
     setAutoStatusMsg('⏳ Step 1/5: Ingesting weighbridge intake & WhatsApp PO payload...');
 
     const rate = localStorage.getItem('fix_rate') || '58.00';
+    const numRate = parseFloat(rate);
+
+    // Sync rate to backend FastAPI first
+    try {
+      await fetch('http://localhost:8000/api/v1/config/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selling_rate: numRate })
+      });
+    } catch (e) {
+      console.warn('Could not sync rate config:', e);
+    }
+
     const newDispatchId = `DSP-${Math.floor(10000 + Math.random() * 90000)}`;
     const newZohoInvId = `41029470000000${Math.floor(50000 + Math.random() * 40000)}`;
 

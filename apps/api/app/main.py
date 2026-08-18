@@ -180,11 +180,10 @@ class NotificationRequest(BaseModel):
     message: str
     whatsapp_number: Optional[str] = None
 
-class RateLockRequest(BaseModel):
-    rate: float
-
 
 # ── Endpoints ───────────────────────────────────────────────────────────
+from app.config_rate import get_current_selling_rate, set_current_selling_rate
+
 @app.get("/health", response_model=HealthCheck, tags=["Health"])
 async def health_check():
     return HealthCheck(
@@ -195,17 +194,17 @@ async def health_check():
     )
 
 
-@app.post("/api/v1/config/rate-lock", tags=["Configuration"])
-async def set_rate_lock_endpoint(payload: RateLockRequest):
-    from app.services.rate_store import rate_store
-    new_rate = rate_store.set_rate(payload.rate)
-    return {"status": "success", "rate_lock": float(new_rate)}
+@app.get("/api/v1/config/rate", tags=["Configuration"])
+async def get_selling_rate_config():
+    rate = get_current_selling_rate()
+    return {"status": "success", "selling_rate": float(rate)}
 
 
-@app.get("/api/v1/config/rate-lock", tags=["Configuration"])
-async def get_rate_lock_endpoint():
-    from app.services.rate_store import rate_store
-    return {"rate_lock": float(rate_store.get_rate())}
+@app.post("/api/v1/config/rate", tags=["Configuration"])
+async def update_selling_rate_config(payload: dict):
+    new_rate = payload.get("selling_rate") or payload.get("rate") or 58.00
+    updated = set_current_selling_rate(float(new_rate))
+    return {"status": "success", "selling_rate": float(updated)}
 
 
 @app.post("/api/v1/dispatches/intake", tags=["Dispatches"], status_code=status.HTTP_201_CREATED)
@@ -214,7 +213,7 @@ async def dispatch_intake(
     current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
     db: AsyncSession = Depends(get_db)
 ):
-    from app.services.rate_store import rate_store
+    current_rate = get_current_selling_rate()
     dispatch = await crud.create_dispatch(
         db=db,
         po_number=payload.po_number or "PO-98765",
@@ -222,7 +221,7 @@ async def dispatch_intake(
         documents=payload.documents,
         whatsapp_message=payload.whatsapp_message,
         customer_name="XYZ Industries",
-        selling_rate=rate_store.get_rate(),
+        selling_rate=current_rate,
         purchase_rate=Decimal("50.00")
     )
     await log_audit_db(db, dispatch.id, "DISPATCH_CREATED", user_id_str=current_user["role"], new_val={"status": dispatch.status})
@@ -409,7 +408,9 @@ async def create_draft_invoice_endpoint(
     async with JOB_LOCKS[job_key]:
         await db.refresh(dispatch)
 
-        po_selling_rate = Decimal(str(selling_rate or dispatch.selling_rate or 58.00))
+        curr_global_rate = float(get_current_selling_rate())
+        effective_rate = selling_rate if (selling_rate and selling_rate != 58.00) else curr_global_rate
+        po_selling_rate = Decimal(str(effective_rate))
         expected_quantity = dispatch.weight_kg or Decimal("12500")
 
         try:

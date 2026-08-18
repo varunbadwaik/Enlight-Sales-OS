@@ -79,15 +79,15 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     localStorage.setItem('fix_rate', formatted);
     setIsEditingRate(false);
 
-    // Sync with FastAPI backend rate store
+    // Sync updated rate to backend FastAPI so Zoho Books API adapter receives updated rate!
     try {
-      await fetch('http://localhost:8000/api/v1/config/rate-lock', {
+      await fetch('http://localhost:8000/api/v1/config/rate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rate: num })
+        body: JSON.stringify({ selling_rate: num })
       });
-    } catch (e) {
-      console.warn('Backend rate lock sync notice:', e);
+    } catch (err) {
+      console.warn('Could not sync rate config to backend:', err);
     }
 
     // Dispatch custom event to notify open page views and sidebar components
