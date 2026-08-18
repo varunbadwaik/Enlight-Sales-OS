@@ -44,8 +44,6 @@ class DocumentClassifyRequest(BaseModel):
     hint: Optional[str] = None
 
 
-from fastapi import APIRouter, Depends, HTTPException, Form, Header, Response, status
-
 @router.post("/agent/webhook", response_class=Response, status_code=status.HTTP_200_OK)
 async def whatsapp_agent_webhook(
     From: Optional[str] = Form(None),
@@ -54,9 +52,7 @@ async def whatsapp_agent_webhook(
     MediaUrl0: Optional[str] = Form(None),
     MediaContentType0: Optional[str] = Form(None),
     Filename0: Optional[str] = Form(None),
-    SellingRate: Optional[str] = Form(None),
-    FixRate: Optional[str] = Form(None),
-    x_fix_rate: Optional[str] = Header(None, alias="X-Fix-Rate"),
+    selling_rate: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     """Twilio WhatsApp Agent Intake Webhook.
@@ -179,17 +175,7 @@ async def whatsapp_agent_webhook(
         parsed_material = f"{m_grade} - {m_size}" if m_grade and m_size else (m_grade or m_size or "Food Grade - 55kg Bags")
         parsed_lr = gemini_parsed.get("transporter") or (lr_match.group(1).strip() if lr_match else "VRL Logistics")
 
-        # 4. Extract Rate Lock from Form parameter, Header, or Message text
-        rate_match = (
-            re.search(r'Rate(?:\s*Lock)?:\s*₹?\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE) or
-            re.search(r'Selling\s*Rate:\s*₹?\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE) or
-            re.search(r'PO\s*Rate:\s*₹?\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE)
-        )
-        rate_str = SellingRate or FixRate or x_fix_rate or (rate_match.group(1).strip() if rate_match else "58.00")
-        try:
-            applied_fix_rate = Decimal(str(rate_str))
-        except Exception:
-            applied_fix_rate = Decimal("58.00")
+        rate_val = Decimal(str(selling_rate)) if selling_rate and str(selling_rate).replace('.', '', 1).isdigit() else Decimal("58.00")
 
         # Create Dispatch record with source="WHATSAPP"
         dispatch = await crud.create_dispatch(
@@ -201,7 +187,7 @@ async def whatsapp_agent_webhook(
             customer_name=parsed_customer,
             vehicle_number=parsed_vehicle,
             weight_kg=parsed_weight,
-            selling_rate=applied_fix_rate,
+            selling_rate=rate_val,
             purchase_rate=Decimal("50.00"),
             source="WHATSAPP"
         )
@@ -215,7 +201,7 @@ async def whatsapp_agent_webhook(
                 customer_id=None,
                 customer_name=parsed_customer,
                 po_number=parsed_po,
-                customer_po_selling_rate=applied_fix_rate,
+                customer_po_selling_rate=rate_val,
                 quantity=parsed_weight,
                 material=parsed_material,
                 vehicle_number=parsed_vehicle,
@@ -248,7 +234,7 @@ async def whatsapp_agent_webhook(
         final_msg = twilio_service.format_completed_message(
             dispatch_id=str(dispatch.id),
             invoice_id=real_invoice_id,
-            selling_rate=float(applied_fix_rate),
+            selling_rate=float(rate_val),
             customer_name=parsed_customer,
             po_number=parsed_po
         )

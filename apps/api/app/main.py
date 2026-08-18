@@ -166,6 +166,10 @@ class DispatchIntakeRequest(BaseModel):
     dispatch_date: Optional[date] = date.today()
     documents: List[str] = ["purchase_bill.pdf", "po.pdf", "lr.jpg", "weight_slip.jpg"]
     whatsapp_message: Optional[str] = "Purchase From: ABC Steel..."
+    selling_rate: Optional[float] = None
+
+class CreateDraftInvoiceRequest(BaseModel):
+    selling_rate: Optional[float] = None
 
 class ApprovalRequest(BaseModel):
     decision: str
@@ -182,8 +186,6 @@ class NotificationRequest(BaseModel):
 
 
 # ── Endpoints ───────────────────────────────────────────────────────────
-from app.config_rate import get_current_selling_rate, set_current_selling_rate
-
 @app.get("/health", response_model=HealthCheck, tags=["Health"])
 async def health_check():
     return HealthCheck(
@@ -194,26 +196,13 @@ async def health_check():
     )
 
 
-@app.get("/api/v1/config/rate", tags=["Configuration"])
-async def get_selling_rate_config():
-    rate = get_current_selling_rate()
-    return {"status": "success", "selling_rate": float(rate)}
-
-
-@app.post("/api/v1/config/rate", tags=["Configuration"])
-async def update_selling_rate_config(payload: dict):
-    new_rate = payload.get("selling_rate") or payload.get("rate") or 58.00
-    updated = set_current_selling_rate(float(new_rate))
-    return {"status": "success", "selling_rate": float(updated)}
-
-
 @app.post("/api/v1/dispatches/intake", tags=["Dispatches"], status_code=status.HTTP_201_CREATED)
 async def dispatch_intake(
     payload: DispatchIntakeRequest,
     current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
     db: AsyncSession = Depends(get_db)
 ):
-    current_rate = get_current_selling_rate()
+    rate_to_apply = Decimal(str(payload.selling_rate)) if payload.selling_rate is not None else Decimal("58.00")
     dispatch = await crud.create_dispatch(
         db=db,
         po_number=payload.po_number or "PO-98765",
@@ -221,7 +210,7 @@ async def dispatch_intake(
         documents=payload.documents,
         whatsapp_message=payload.whatsapp_message,
         customer_name="XYZ Industries",
-        selling_rate=current_rate,
+        selling_rate=rate_to_apply,
         purchase_rate=Decimal("50.00")
     )
     await log_audit_db(db, dispatch.id, "DISPATCH_CREATED", user_id_str=current_user["role"], new_val={"status": dispatch.status})
@@ -395,36 +384,35 @@ async def create_purchase_bill(
 @app.post("/api/v1/dispatches/{dispatch_id}/create-draft-invoice", tags=["Zoho Integration"])
 async def create_draft_invoice_endpoint(
     dispatch_id: str,
-    selling_rate: Optional[float] = None,
-    payload: Optional[dict] = None,
-    current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
+    payload: Optional[CreateDraftInvoiceRequest] = None,
+    current_user: dict = Depends(require_roles(["Admin"])),
     db: AsyncSession = Depends(get_db)
 ):
     dispatch = await resolve_dispatch(db, dispatch_id)
 
-    # 1. Resolve rate: check query param -> check payload body -> check dispatch.selling_rate -> check global rate store
-    resolved_rate = None
-    if selling_rate is not None and selling_rate > 0:
-        resolved_rate = float(selling_rate)
-    elif payload and isinstance(payload, dict) and payload.get("selling_rate"):
-        resolved_rate = float(payload["selling_rate"])
-    elif dispatch.selling_rate:
-        resolved_rate = float(dispatch.selling_rate)
+    if payload and payload.selling_rate is not None:
+        dispatch.selling_rate = Decimal(str(payload.selling_rate))
+        await db.commit()
 
-    if not resolved_rate or resolved_rate <= 0:
-        resolved_rate = float(get_current_selling_rate())
-
-    # Update backend rate config store with user UI rate
-    set_current_selling_rate(resolved_rate)
-    po_selling_rate = Decimal(str(resolved_rate))
-    expected_quantity = dispatch.weight_kg or Decimal("12500")
-
-    job_key = f"{dispatch.id}_CREATE_DRAFT_INVOICE_{resolved_rate}"
+    job_key = f"{dispatch.id}_CREATE_DRAFT_INVOICE"
     if job_key not in JOB_LOCKS:
         JOB_LOCKS[job_key] = asyncio.Lock()
 
     async with JOB_LOCKS[job_key]:
+        # Refresh to get latest status inside lock
         await db.refresh(dispatch)
+
+        if job_key in JOBS_CACHE and JOBS_CACHE[job_key]["status"] == "SUCCESS":
+            return JOBS_CACHE[job_key]["result"]
+
+        if dispatch.status not in ["APPROVED", "DRAFT_INVOICE_CREATED"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot create invoice: Dispatch status is '{dispatch.status}', expected 'APPROVED'"
+            )
+
+        po_selling_rate = dispatch.selling_rate or Decimal("58.00")
+        expected_quantity = dispatch.weight_kg or Decimal("12500")
 
         try:
             if settings.ZOHO_REFRESH_TOKEN:
@@ -445,7 +433,6 @@ async def create_draft_invoice_endpoint(
                     "status": "draft",
                     "selling_rate_applied": float(po_selling_rate),
                     "quantity": float(expected_quantity),
-                    "total_amount": float(po_selling_rate * expected_quantity),
                     "source": f"Customer PO ({dispatch.po_number or 'PO-98765'})"
                 }
         except Exception as e:
@@ -456,13 +443,11 @@ async def create_draft_invoice_endpoint(
                 "status": "draft",
                 "selling_rate_applied": float(po_selling_rate),
                 "quantity": float(expected_quantity),
-                "total_amount": float(po_selling_rate * expected_quantity),
                 "source": f"Customer PO ({dispatch.po_number or 'PO-98765'})"
             }
 
         JOBS_CACHE[job_key] = {"status": "SUCCESS", "result": result}
         dispatch.status = "DRAFT_INVOICE_CREATED"
-        dispatch.selling_rate = po_selling_rate
         dispatch.zoho_sales_invoice_id = result["invoice_id"]
         await db.commit()
 

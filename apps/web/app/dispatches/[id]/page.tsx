@@ -42,10 +42,12 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
       const approveData = await approveRes.json();
       setApprovalDecision('APPROVED');
 
-      // Step 2: Call API to Create Draft Sales Invoice (Customer PO Rate ₹58/kg Lock)
+      // Step 2: Call API to Create Draft Sales Invoice (Customer PO Rate Lock)
+      const currentRate = parseFloat(poRate || '58.00');
       const invoiceRes = await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/create-draft-invoice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Role': 'Admin' },
+        body: JSON.stringify({ selling_rate: currentRate })
       });
       const invoiceData = await invoiceRes.json();
       setInvoiceDetails(invoiceData);
@@ -55,7 +57,7 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
       setAuditLogs((prev) => [
         ...prev,
         { time: now, action: 'ADMIN_APPROVED', details: 'Admin approved dispatch for Zoho Draft Sales Invoice creation.' },
-        { time: now, action: 'DRAFT_INVOICE_CREATED', details: `Zoho Sales Invoice ${invoiceData.invoice_id || 'inv_zoho_DSP-001'} created at locked PO rate ₹58/kg in DRAFT status.` }
+        { time: now, action: 'DRAFT_INVOICE_CREATED', details: `Zoho Sales Invoice ${invoiceData.invoice_id || 'inv_zoho_DSP-001'} created at locked PO rate ₹${currentRate.toFixed(2)}/kg in DRAFT status.` }
       ]);
 
       // Automatically switch to Draft Invoice tab
