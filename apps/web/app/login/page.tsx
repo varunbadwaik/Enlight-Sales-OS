@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Lock, Mail, ArrowRight, CheckCircle2, Sparkles, AlertCircle, Eye, EyeOff, User, UserPlus, KeyRound, Globe, ShieldCheck, Briefcase } from 'lucide-react';
+import { Shield, Lock, Mail, ArrowRight, CheckCircle2, Sparkles, AlertCircle, Eye, EyeOff, User, UserPlus, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function LoginPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
-  const [authMode, setAuthMode] = useState<'password' | 'magic-link'>('password');
 
   // Sign In / Sign Up Form State
   const [email, setEmail] = useState('admin@enlightsales.com');
@@ -51,7 +50,7 @@ export default function LoginPage() {
     }
   };
 
-  // Handle Sign In Submission
+  // Handle Sign In Submission (Email & Password)
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -59,14 +58,6 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
-      if (authMode === 'magic-link') {
-        const { error: magicErr } = await supabase.auth.signInWithOtp({ email });
-        if (magicErr) throw magicErr;
-        setSuccessMsg('Magic Login Link sent to your Gmail inbox! Please verify.');
-        setLoading(false);
-        return;
-      }
-
       // 1. Try Supabase Password Login First
       const { data: supaData, error: supaErr } = await supabase.auth.signInWithPassword({
         email,
@@ -138,16 +129,14 @@ export default function LoginPage() {
         }),
       });
 
-      let dbUserData = null;
       if (dbRes.ok) {
         const dbData = await dbRes.json();
-        dbUserData = dbData.user;
         localStorage.setItem('token', dbData.access_token);
         localStorage.setItem('user', JSON.stringify(dbData.user));
       }
 
       // 2. Also Create Account in Supabase Auth
-      const { data: supaSignUp, error: supaErr } = await supabase.auth.signUp({
+      const { data: supaSignUp } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -194,7 +183,7 @@ export default function LoginPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
             </span>
-            Authentication & RBAC Center
+            Authentication Center
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
@@ -203,7 +192,7 @@ export default function LoginPage() {
 
           <p className="text-xs sm:text-sm text-slate-400 max-w-xs mx-auto leading-relaxed">
             {activeTab === 'signin' 
-              ? 'Enter your credentials or use Gmail to access dashboard' 
+              ? 'Enter your email & password or use Gmail to access dashboard' 
               : 'Register your account to manage Zoho dispatches & invoices'}
           </p>
         </div>
@@ -271,24 +260,6 @@ export default function LoginPage() {
         {/* ==================== SIGN IN FORM ==================== */}
         {activeTab === 'signin' && (
           <form onSubmit={handleSignIn} className="space-y-3.5">
-            {/* Mode Toggle (Password vs Magic Link) */}
-            <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800/80 text-[11px] font-medium text-slate-400">
-              <button
-                type="button"
-                onClick={() => setAuthMode('password')}
-                className={`flex-1 py-1.5 rounded-lg transition-all ${authMode === 'password' ? 'bg-slate-800 text-white font-semibold' : 'hover:text-slate-200'}`}
-              >
-                Password Login
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthMode('magic-link')}
-                className={`flex-1 py-1.5 rounded-lg transition-all ${authMode === 'magic-link' ? 'bg-slate-800 text-white font-semibold' : 'hover:text-slate-200'}`}
-              >
-                Magic Link
-              </button>
-            </div>
-
             {/* Email */}
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-slate-300">Email Address</label>
@@ -308,31 +279,29 @@ export default function LoginPage() {
             </div>
 
             {/* Password */}
-            {authMode === 'password' && (
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-300">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-300">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Lock className="w-4 h-4" />
                 </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
-            )}
+            </div>
 
             <button
               type="submit"
@@ -347,7 +316,7 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <span>{authMode === 'magic-link' ? 'Send Magic Link' : 'Sign In'}</span>
+                    <span>Sign In</span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
