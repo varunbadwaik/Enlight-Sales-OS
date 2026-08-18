@@ -1,11 +1,24 @@
 import { DispatchRecord, ValidationReport, AuditLogEntry } from './types';
+import { getSupabaseAuthHeader } from './supabaseClient';
 
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const authHeader = await getSupabaseAuthHeader();
+  const localUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  let userRole = 'Admin';
+  if (localUser) {
+    try {
+      userRole = JSON.parse(localUser).role || 'Admin';
+    } catch {
+      // ignore
+    }
+  }
+
   const headers = {
     'Content-Type': 'application/json',
-    'X-User-Role': 'Admin',
+    'X-User-Role': userRole,
+    ...authHeader,
     ...(options.headers || {}),
   };
 
