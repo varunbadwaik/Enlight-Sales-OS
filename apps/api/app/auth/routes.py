@@ -1,5 +1,6 @@
-"""Authentication API Router for Enlight Sales OS."""
+"""Authentication & Authorization API Router for Enlight Sales OS."""
 
+import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordRequestForm
@@ -18,7 +19,7 @@ class UserRegisterRequest(BaseModel):
     email: str
     password: str
     full_name: str
-    role: str = "Dispatch"  # Admin, Accountant, Dispatch
+    role: str = "Admin"  # Admin, Accountant, Dispatch
 
 
 class UserLoginRequest(BaseModel):
@@ -42,25 +43,31 @@ async def get_current_user(
         try:
             payload = decode_access_token(token)
             email: str = payload.get("email") or payload.get("sub")
-            sub_id: str = payload.get("sub") or payload.get("id") or "supa-user-id"
+            sub_id: str = payload.get("sub") or payload.get("id") or str(uuid.uuid4())
             user_metadata = payload.get("user_metadata", {})
+            full_name: str = user_metadata.get("full_name") or (email.split("@")[0] if email else "User")
             role: str = user_metadata.get("role") or payload.get("role") or "Admin"
 
             if email and "@" in email:
                 result = await db.execute(select(User).where(User.email == email))
                 user = result.scalar_one_or_none()
-                if user:
-                    return {
-                        "id": str(user.id),
-                        "email": user.email,
-                        "full_name": user.full_name,
-                        "role": user.role,
-                    }
+                if not user:
+                    # Auto-provision OAuth/Supabase user in database
+                    user = User(
+                        email=email,
+                        password_hash=hash_password(str(uuid.uuid4())),
+                        full_name=full_name,
+                        role=role,
+                    )
+                    db.add(user)
+                    await db.commit()
+                    await db.refresh(user)
+
                 return {
-                    "id": sub_id,
-                    "email": email,
-                    "full_name": user_metadata.get("full_name") or email.split("@")[0],
-                    "role": role,
+                    "id": str(user.id),
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "role": user.role,
                 }
         except Exception:
             pass
@@ -88,16 +95,18 @@ def require_roles(allowed_roles: list):
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(payload: UserRegisterRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == payload.email))
+    """Create account and persist user credentials in database."""
+    email_clean = payload.email.strip().lower()
+    result = await db.execute(select(User).where(User.email == email_clean))
     existing = result.scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=400, detail="User email already registered")
+        raise HTTPException(status_code=400, detail="User email is already registered")
 
     user = User(
-        email=payload.email,
+        email=email_clean,
         password_hash=hash_password(payload.password),
-        full_name=payload.full_name,
-        role=payload.role,
+        full_name=payload.full_name.strip(),
+        role=payload.role.strip(),
     )
     db.add(user)
     await db.commit()
@@ -107,13 +116,20 @@ async def register(payload: UserRegisterRequest, db: AsyncSession = Depends(get_
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": str(user.id), "email": user.email, "full_name": user.full_name, "role": user.role}
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role
+        }
     }
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: UserLoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == payload.email))
+    """Authenticate email & password against database users table."""
+    email_clean = payload.email.strip().lower()
+    result = await db.execute(select(User).where(User.email == email_clean))
     user = result.scalar_one_or_none()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -124,7 +140,12 @@ async def login(payload: UserLoginRequest, db: AsyncSession = Depends(get_db)):
     token = create_access_token({"sub": user.email, "role": user.role, "id": str(user.id)})
     return TokenResponse(
         access_token=token,
-        user={"id": str(user.id), "email": user.email, "full_name": user.full_name, "role": user.role}
+        user={
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role
+        }
     )
 
 
