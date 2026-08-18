@@ -68,7 +68,7 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     setAuthChecked(true);
   }, [isLoginPage, router]);
 
-  const handleSaveRate = () => {
+  const handleSaveRate = async () => {
     const num = parseFloat(tempRate);
     if (isNaN(num) || num <= 0) {
       alert('Please enter a valid positive rate.');
@@ -78,6 +78,18 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     setFixRate(formatted);
     localStorage.setItem('fix_rate', formatted);
     setIsEditingRate(false);
+
+    // Sync with FastAPI backend rate store
+    try {
+      await fetch('http://localhost:8000/api/v1/config/rate-lock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rate: num })
+      });
+    } catch (e) {
+      console.warn('Backend rate lock sync notice:', e);
+    }
+
     // Dispatch custom event to notify open page views and sidebar components
     window.dispatchEvent(new CustomEvent('fixRateChanged', { detail: formatted }));
   };

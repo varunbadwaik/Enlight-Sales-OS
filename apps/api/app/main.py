@@ -180,6 +180,9 @@ class NotificationRequest(BaseModel):
     message: str
     whatsapp_number: Optional[str] = None
 
+class RateLockRequest(BaseModel):
+    rate: float
+
 
 # ── Endpoints ───────────────────────────────────────────────────────────
 @app.get("/health", response_model=HealthCheck, tags=["Health"])
@@ -192,12 +195,26 @@ async def health_check():
     )
 
 
+@app.post("/api/v1/config/rate-lock", tags=["Configuration"])
+async def set_rate_lock_endpoint(payload: RateLockRequest):
+    from app.services.rate_store import rate_store
+    new_rate = rate_store.set_rate(payload.rate)
+    return {"status": "success", "rate_lock": float(new_rate)}
+
+
+@app.get("/api/v1/config/rate-lock", tags=["Configuration"])
+async def get_rate_lock_endpoint():
+    from app.services.rate_store import rate_store
+    return {"rate_lock": float(rate_store.get_rate())}
+
+
 @app.post("/api/v1/dispatches/intake", tags=["Dispatches"], status_code=status.HTTP_201_CREATED)
 async def dispatch_intake(
     payload: DispatchIntakeRequest,
     current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
     db: AsyncSession = Depends(get_db)
 ):
+    from app.services.rate_store import rate_store
     dispatch = await crud.create_dispatch(
         db=db,
         po_number=payload.po_number or "PO-98765",
@@ -205,7 +222,7 @@ async def dispatch_intake(
         documents=payload.documents,
         whatsapp_message=payload.whatsapp_message,
         customer_name="XYZ Industries",
-        selling_rate=Decimal("58.00"),
+        selling_rate=rate_store.get_rate(),
         purchase_rate=Decimal("50.00")
     )
     await log_audit_db(db, dispatch.id, "DISPATCH_CREATED", user_id_str=current_user["role"], new_val={"status": dispatch.status})
