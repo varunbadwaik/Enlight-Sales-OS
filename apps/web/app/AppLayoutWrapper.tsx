@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { LogOut, ShieldCheck, User, Edit3, Check, X, DollarSign } from 'lucide-react';
+import { LogOut, ShieldCheck, User } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
 interface UserInfo {
@@ -20,19 +20,7 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
   const [user, setUser] = useState<UserInfo | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Dynamic Customer PO Rate State
-  const [poRate, setPoRate] = useState<string>('58.00');
-  const [isEditingRate, setIsEditingRate] = useState(false);
-  const [tempRate, setTempRate] = useState<string>('58.00');
-
   useEffect(() => {
-    // Load stored PO Rate or default to 58.00
-    if (typeof window !== 'undefined') {
-      const storedRate = localStorage.getItem('customer_po_rate') || '58.00';
-      setPoRate(storedRate);
-      setTempRate(storedRate);
-    }
-
     async function checkAuthStatus() {
       const token = localStorage.getItem('token');
       const userData = localStorage.getItem('user');
@@ -71,16 +59,6 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
 
     checkAuthStatus();
   }, [isLoginPage, router]);
-
-  const handleSaveRate = () => {
-    const formatted = parseFloat(tempRate || '58.00').toFixed(2);
-    setPoRate(formatted);
-    localStorage.setItem('customer_po_rate', formatted);
-    setIsEditingRate(false);
-
-    // Dispatch global event for all open pages
-    window.dispatchEvent(new CustomEvent('poRateUpdated', { detail: formatted }));
-  };
 
   const handleLogout = async () => {
     try {
@@ -228,89 +206,12 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
             </button>
           </div>
 
-          {/* Dynamic Statutory Protection Card with Rate Editor */}
+          {/* Statutory Protection Banner */}
           <div className="statutory-card" style={{ marginTop: '14px' }}>
-            <div className="statutory-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>🛡️</span> Statutory Rule
-              </div>
-              {!isEditingRate && (
-                <button
-                  onClick={() => setIsEditingRate(true)}
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.15)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    color: '#60A5FA',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    fontSize: '10px',
-                    cursor: 'pointer',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)')}
-                  onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)')}
-                >
-                  <Edit3 style={{ width: '10px', height: '10px' }} />
-                  <span>Edit Rate</span>
-                </button>
-              )}
+            <div className="statutory-title">
+              <span>🛡️</span> Statutory Rule
             </div>
-
-            {isEditingRate ? (
-              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Set Customer PO Rate (₹/kg):</div>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <div style={{ position: 'relative', flex: 1 }}>
-                    <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8', fontSize: '12px', fontWeight: '700' }}>₹</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={tempRate}
-                      onChange={(e) => setTempRate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        backgroundColor: '#0F172A',
-                        border: '1px solid #3B82F6',
-                        borderRadius: '6px',
-                        padding: '5px 8px 5px 22px',
-                        color: '#F8FAFC',
-                        fontSize: '13px',
-                        fontWeight: '700',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <button
-                    onClick={handleSaveRate}
-                    title="Save Rate"
-                    style={{
-                      background: '#10B981', border: 'none', color: '#FFF',
-                      borderRadius: '6px', padding: '6px', cursor: 'pointer'
-                    }}
-                  >
-                    <Check style={{ width: '14px', height: '14px' }} />
-                  </button>
-                  <button
-                    onClick={() => { setIsEditingRate(false); setTempRate(poRate); }}
-                    title="Cancel"
-                    style={{
-                      background: '#64748B', border: 'none', color: '#FFF',
-                      borderRadius: '6px', padding: '6px', cursor: 'pointer'
-                    }}
-                  >
-                    <X style={{ width: '14px', height: '14px' }} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ marginTop: '4px', fontSize: '12px', lineHeight: '1.5', color: '#94A3B8' }}>
-                Draft invoices locked at Customer PO rate (<span style={{ color: '#38BDF8', fontWeight: '700' }}>₹{poRate}/kg</span>). Status = DRAFT only.
-              </div>
-            )}
+            Draft invoices locked at Customer PO rate (₹58.00/kg). Status = DRAFT only.
           </div>
         </div>
       </aside>

@@ -5,27 +5,12 @@ import Link from 'next/link';
 
 export default function OperationalDashboard() {
   const [dispatches, setDispatches] = useState<any[]>([]);
-  const [poRate, setPoRate] = useState<string>('58.00');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPoRate(localStorage.getItem('customer_po_rate') || '58.00');
-    }
-
-    const handleRateUpdate = (e: any) => {
-      if (e.detail) {
-        setPoRate(e.detail);
-      }
-    };
-    window.addEventListener('poRateUpdated', handleRateUpdate);
-    return () => window.removeEventListener('poRateUpdated', handleRateUpdate);
-  }, []);
 
   useEffect(() => {
     const fetchDispatches = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        const headers: Record<string, string> = { 
+        const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           'X-User-Role': 'Admin'
         };
@@ -83,7 +68,7 @@ export default function OperationalDashboard() {
           <span style={{ color: '#94A3B8' }}>Zoho Books Org: 60082578964</span>
         </div>
         <div style={{ fontSize: '12px', color: '#38BDF8', fontWeight: '700' }}>
-          Strict Rate Lock: ₹{poRate}/kg
+          Strict Rate Lock: ₹58.00/kg
         </div>
       </div>
 
@@ -194,10 +179,9 @@ export default function OperationalDashboard() {
                   </span>
                 </td>
                 <td>
-                  <span className={`badge ${
-                    item.status === 'DRAFT_INVOICE_CREATED' ? 'badge-draft' :
+                  <span className={`badge ${item.status === 'DRAFT_INVOICE_CREATED' ? 'badge-draft' :
                     item.status === 'VALIDATED' || item.status === 'APPROVED' ? 'badge-validated' : 'badge-pending'
-                  }`}>
+                    }`}>
                     <span className="badge-pulse" />
                     {item.status || 'DRAFT_INVOICE_CREATED'}
                   </span>
@@ -205,11 +189,7 @@ export default function OperationalDashboard() {
                 <td>
                   {item.zoho_sales_invoice_id ? (
                     <a
-                      href={
-                        /^410\d{16}$/.test(String(item.zoho_sales_invoice_id))
-                          ? `https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id}`
-                          : `https://books.zoho.in/app/60082578964#/invoices?filter_by=Status.Draft`
-                      }
+                      href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-zoho"

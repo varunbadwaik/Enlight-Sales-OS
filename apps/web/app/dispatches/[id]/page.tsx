@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 
 export default function DispatchDetailPage({ params }: { params: { id: string } }) {
@@ -9,21 +9,6 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
   const [approvalDecision, setApprovalDecision] = useState<string | null>('VALIDATED');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [invoiceDetails, setInvoiceDetails] = useState<any>(null);
-  const [poRate, setPoRate] = useState<string>('58.00');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPoRate(localStorage.getItem('customer_po_rate') || '58.00');
-    }
-
-    const handleRateUpdate = (e: any) => {
-      if (e.detail) {
-        setPoRate(e.detail);
-      }
-    };
-    window.addEventListener('poRateUpdated', handleRateUpdate);
-    return () => window.removeEventListener('poRateUpdated', handleRateUpdate);
-  }, []);
   const [auditLogs, setAuditLogs] = useState<any[]>([
     { time: '10:20 AM', action: 'DISPATCH_CREATED', details: `Dispatch ${dispatchId} created in DOCUMENTS_UPLOADED status.` },
     { time: '10:21 AM', action: 'GEMINI_EXTRACTION_COMPLETED', details: 'Extracted structured JSON for PO, Bill, LR, Weighment slip.' },
@@ -42,12 +27,10 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
       const approveData = await approveRes.json();
       setApprovalDecision('APPROVED');
 
-      // Step 2: Call API to Create Draft Sales Invoice (Customer PO Rate Lock from UI)
-      const currentRate = parseFloat(poRate || '58.00');
+      // Step 2: Call API to Create Draft Sales Invoice (Customer PO Rate ₹58/kg Lock)
       const invoiceRes = await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/create-draft-invoice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Role': 'Admin' },
-        body: JSON.stringify({ selling_rate: currentRate })
       });
       const invoiceData = await invoiceRes.json();
       setInvoiceDetails(invoiceData);
@@ -57,7 +40,7 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
       setAuditLogs((prev) => [
         ...prev,
         { time: now, action: 'ADMIN_APPROVED', details: 'Admin approved dispatch for Zoho Draft Sales Invoice creation.' },
-        { time: now, action: 'DRAFT_INVOICE_CREATED', details: `Zoho Sales Invoice ${invoiceData.invoice_id || 'inv_zoho_DSP-001'} created at locked PO rate ₹${currentRate.toFixed(2)}/kg in DRAFT status.` }
+        { time: now, action: 'DRAFT_INVOICE_CREATED', details: `Zoho Sales Invoice ${invoiceData.invoice_id || 'inv_zoho_DSP-001'} created at locked PO rate ₹58/kg in DRAFT status.` }
       ]);
 
       // Automatically switch to Draft Invoice tab
@@ -311,7 +294,7 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
                 <span className="rate-lock-title">Customer PO Selling Rate</span>
                 <span className="rate-lock-badge">Customer PO PO-98765</span>
               </div>
-              <div className="rate-lock-value">₹{poRate} / kg</div>
+              <div className="rate-lock-value">₹58.00 / kg</div>
               <p className="rate-lock-desc">
                 *Mandatory Selling Rate: Hard-locked to Customer PO rate. Vendor Purchase Bill rate (₹50.00) is ignored for sales invoice creation.
               </p>
