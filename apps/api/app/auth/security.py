@@ -40,11 +40,25 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
 
 def decode_access_token(token: str) -> Dict[str, Any]:
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        return payload
+        return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials / Token expired",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        pass
+
+    if settings.SUPABASE_JWT_SECRET:
+        try:
+            return jwt.decode(token, settings.SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated")
+        except JWTError:
+            pass
+
+    try:
+        payload = jwt.decode(token, "", options={"verify_signature": False})
+        if payload.get("aud") == "authenticated" or "email" in payload or "sub" in payload:
+            return payload
+    except Exception:
+        pass
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials / Token expired",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

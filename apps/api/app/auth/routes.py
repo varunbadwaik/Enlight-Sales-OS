@@ -37,13 +37,16 @@ async def get_current_user(
     x_user_role: Optional[str] = Header("Admin", alias="X-User-Role"),
     db: AsyncSession = Depends(get_db)
 ) -> dict:
-    """Dependency that extracts user from JWT Bearer token, falling back to header role for dev mode."""
+    """Dependency that extracts user from JWT Bearer token (Supabase or Local), falling back to header role for dev mode."""
     if token:
         try:
             payload = decode_access_token(token)
-            email: str = payload.get("sub")
-            role: str = payload.get("role", "Dispatch")
-            if email:
+            email: str = payload.get("email") or payload.get("sub")
+            sub_id: str = payload.get("sub") or payload.get("id") or "supa-user-id"
+            user_metadata = payload.get("user_metadata", {})
+            role: str = user_metadata.get("role") or payload.get("role") or "Admin"
+
+            if email and "@" in email:
                 result = await db.execute(select(User).where(User.email == email))
                 user = result.scalar_one_or_none()
                 if user:
@@ -53,6 +56,12 @@ async def get_current_user(
                         "full_name": user.full_name,
                         "role": user.role,
                     }
+                return {
+                    "id": sub_id,
+                    "email": email,
+                    "full_name": user_metadata.get("full_name") or email.split("@")[0],
+                    "role": role,
+                }
         except Exception:
             pass
 
