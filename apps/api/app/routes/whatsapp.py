@@ -52,7 +52,6 @@ async def whatsapp_agent_webhook(
     MediaUrl0: Optional[str] = Form(None),
     MediaContentType0: Optional[str] = Form(None),
     Filename0: Optional[str] = Form(None),
-    selling_rate: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     """Twilio WhatsApp Agent Intake Webhook.
@@ -175,8 +174,6 @@ async def whatsapp_agent_webhook(
         parsed_material = f"{m_grade} - {m_size}" if m_grade and m_size else (m_grade or m_size or "Food Grade - 55kg Bags")
         parsed_lr = gemini_parsed.get("transporter") or (lr_match.group(1).strip() if lr_match else "VRL Logistics")
 
-        rate_val = Decimal(str(selling_rate)) if selling_rate and str(selling_rate).replace('.', '', 1).isdigit() else (Decimal(str(gemini_parsed.get("selling_rate"))) if gemini_parsed.get("selling_rate") else Decimal("58.00"))
-
         # Create Dispatch record with source="WHATSAPP"
         dispatch = await crud.create_dispatch(
             db=db,
@@ -187,7 +184,7 @@ async def whatsapp_agent_webhook(
             customer_name=parsed_customer,
             vehicle_number=parsed_vehicle,
             weight_kg=parsed_weight,
-            selling_rate=rate_val,
+            selling_rate=Decimal("58.00"),
             purchase_rate=Decimal("50.00"),
             source="WHATSAPP"
         )
@@ -201,7 +198,7 @@ async def whatsapp_agent_webhook(
                 customer_id=None,
                 customer_name=parsed_customer,
                 po_number=parsed_po,
-                customer_po_selling_rate=rate_val,
+                customer_po_selling_rate=Decimal("58.00"),
                 quantity=parsed_weight,
                 material=parsed_material,
                 vehicle_number=parsed_vehicle,
@@ -234,7 +231,7 @@ async def whatsapp_agent_webhook(
         final_msg = twilio_service.format_completed_message(
             dispatch_id=str(dispatch.id),
             invoice_id=real_invoice_id,
-            selling_rate=float(rate_val),
+            selling_rate=58.0,
             customer_name=parsed_customer,
             po_number=parsed_po
         )

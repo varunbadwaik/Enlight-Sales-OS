@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('admin@enlightsales.com');
   const [password, setPassword] = useState('admin123');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<'Admin' | 'Accountant' | 'Dispatch'>('Admin');
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -83,7 +82,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify({
         id: 'google-prod-user-id',
         email: gmailEmail,
-        full_name: 'Google Admin User',
+        full_name: 'Dara Whitfield',
         role: 'Admin',
         provider: 'google'
       }));
@@ -105,7 +104,6 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
-      // 1. Try Supabase Password Login First if configured
       if (isSupabaseConfigured) {
         const { data: supaData, error: supaErr } = await supabase.auth.signInWithPassword({
           email,
@@ -127,7 +125,6 @@ export default function LoginPage() {
         }
       }
 
-      // 2. Fallback to Backend Database Login
       const res = await fetch('http://localhost:8000/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -166,7 +163,6 @@ export default function LoginPage() {
     }
 
     try {
-      // 1. Register User in Database Backend
       const dbRes = await fetch('http://localhost:8000/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,7 +188,6 @@ export default function LoginPage() {
         }));
       }
 
-      // 2. Also Create Account in Supabase Auth if configured
       if (isSupabaseConfigured) {
         const { data: supaSignUp } = await supabase.auth.signUp({
           email,
@@ -227,63 +222,54 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans">
-      {/* Ambient Background Glows */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/20 rounded-full blur-[128px] pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-emerald-600/20 rounded-full blur-[128px] pointer-events-none" />
-
-      {/* Glassmorphic Auth Card */}
-      <div className="relative w-full max-w-md bg-slate-900/85 backdrop-blur-2xl border border-slate-800/90 rounded-3xl p-7 sm:p-9 shadow-2xl shadow-slate-950/90 space-y-5 z-10">
+    <div className="min-h-screen bg-[#F4F4F6] text-slate-900 flex items-center justify-center p-4 sm:p-6 font-sans">
+      {/* Light Clean Auth Card matching Pulse Clinic Inspiration */}
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
 
         {/* Header Branding */}
-        <div className="text-center space-y-2.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold tracking-wide">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-            </span>
-            Production Level Security
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+            Pulse Clinic OS 1.0
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {activeTab === 'signin' ? 'Sign In to Enlight OS' : 'Create Account'}
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            {activeTab === 'signin' ? 'Sign In to Pulse Clinic' : 'Create Account'}
           </h1>
 
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xs mx-auto leading-relaxed">
+          <p className="text-xs text-slate-500 max-w-xs mx-auto">
             {activeTab === 'signin' 
               ? 'Enter your credentials or continue with Google' 
               : 'Register your production account for Enlight Sales OS'}
           </p>
         </div>
 
-        {/* Main Tab Switcher (Sign In vs Create Account) */}
-        <div className="flex bg-slate-950/90 p-1 rounded-2xl border border-slate-800 text-xs font-bold text-slate-400">
+        {/* Tab Switcher */}
+        <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600">
           <button
             type="button"
             onClick={() => { setActiveTab('signin'); setError(''); setSuccessMsg(''); }}
-            className={`flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === 'signin' ? 'bg-blue-600 text-white shadow-lg' : 'hover:text-slate-200'}`}
+            className={`flex-1 py-2 rounded-lg transition-all ${activeTab === 'signin' ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-900'}`}
           >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Sign In</span>
+            Sign In
           </button>
           <button
             type="button"
             onClick={() => { setActiveTab('signup'); setError(''); setSuccessMsg(''); }}
-            className={`flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === 'signup' ? 'bg-emerald-600 text-white shadow-lg' : 'hover:text-slate-200'}`}
+            className={`flex-1 py-2 rounded-lg transition-all ${activeTab === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-900'}`}
           >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span>Create Account</span>
+            Create Account
           </button>
         </div>
 
-        {/* Google / Gmail Single Click OAuth Button */}
+        {/* Google / Gmail Button */}
         <button
           type="button"
           onClick={handleGoogleSignIn}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-3 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-700/80 font-semibold py-2.5 px-4 rounded-2xl transition-all text-xs shadow-md disabled:opacity-50 group cursor-pointer"
+          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold py-2.5 px-4 rounded-xl transition-all text-xs cursor-pointer shadow-sm disabled:opacity-50"
         >
-          <svg className="w-4 h-4 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
             <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
             <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12.5s.7 2.8 1.9 5.2l3.7-2.9z"/>
@@ -292,70 +278,57 @@ export default function LoginPage() {
           <span>{googleLoading ? 'Connecting...' : 'Continue with Google / Gmail'}</span>
         </button>
 
-        <div className="relative flex items-center justify-center text-[11px] text-slate-500 my-2">
-          <div className="border-t border-slate-800 w-full" />
-          <span className="bg-slate-900 px-3 uppercase tracking-wider font-semibold text-[10px]">or email credentials</span>
-          <div className="border-t border-slate-800 w-full" />
+        <div className="relative flex items-center justify-center text-[11px] text-slate-400 my-2">
+          <div className="border-t border-slate-200 w-full" />
+          <span className="bg-white px-2 uppercase tracking-wider font-semibold text-[10px]">or email</span>
+          <div className="border-t border-slate-200 w-full" />
         </div>
 
         {/* Notifications */}
         {error && (
-          <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 text-red-300 p-3 rounded-2xl text-xs leading-relaxed">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold text-red-200">Auth Note: </span>
-              {error}
-            </div>
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <div>{error}</div>
           </div>
         )}
 
         {successMsg && (
-          <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 p-3 rounded-2xl text-xs">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span className="font-medium">{successMsg}</span>
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 rounded-xl text-xs">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMsg}</span>
           </div>
         )}
 
-        {/* ==================== SIGN IN FORM ==================== */}
+        {/* SIGN IN FORM */}
         {activeTab === 'signin' && (
           <form onSubmit={handleSignIn} className="space-y-3.5">
-            {/* Email */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-300">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                  placeholder="name@company.com"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-400"
+                placeholder="name@company.com"
+              />
             </div>
 
-            {/* Password */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-300">Password</label>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="w-4 h-4" />
-                </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3.5 pr-10 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-400"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -365,122 +338,61 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full relative group overflow-hidden bg-gradient-to-r from-blue-600 via-sky-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-bold py-3 px-5 rounded-2xl transition-all duration-200 shadow-xl shadow-blue-600/25 text-sm disabled:opacity-50 mt-2"
+              className="btn-dark-pill w-full justify-center py-2.5 text-xs font-bold mt-2"
             >
-              <div className="relative z-10 flex items-center justify-center gap-2">
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Authenticating...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </div>
+              {loading ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
         )}
 
-        {/* ==================== CREATE ACCOUNT FORM ==================== */}
+        {/* CREATE ACCOUNT FORM */}
         {activeTab === 'signup' && (
-          <form onSubmit={handleSignUp} className="space-y-3">
-            {/* Full Name */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-300">Full Name</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <User className="w-4 h-4" />
-                </div>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                  placeholder="e.g. Varun Badwaik"
-                />
-              </div>
+          <form onSubmit={handleSignUp} className="space-y-3.5">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-400"
+                placeholder="e.g. Dara Whitfield"
+              />
             </div>
 
-            {/* Email */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-300">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                  placeholder="name@company.com"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-400"
+                placeholder="name@company.com"
+              />
             </div>
 
-            {/* Password */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-300">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl pl-10 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                  placeholder="Minimum 6 characters"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-400"
+                placeholder="Minimum 6 characters"
+              />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full relative group overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold py-3 px-5 rounded-2xl transition-all duration-200 shadow-xl shadow-emerald-600/25 text-sm disabled:opacity-50 mt-2"
+              className="btn-dark-pill w-full justify-center py-2.5 text-xs font-bold mt-2"
             >
-              <div className="relative z-10 flex items-center justify-center gap-2">
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Creating Account & Starting Session...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Create Account & Start Session</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </div>
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
         )}
-
-        {/* Security Badges */}
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Production Database & JWT Auth</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Statutory Rate Lock</span>
-          </div>
-        </div>
 
       </div>
     </div>

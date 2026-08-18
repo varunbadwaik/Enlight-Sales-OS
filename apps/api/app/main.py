@@ -166,10 +166,6 @@ class DispatchIntakeRequest(BaseModel):
     dispatch_date: Optional[date] = date.today()
     documents: List[str] = ["purchase_bill.pdf", "po.pdf", "lr.jpg", "weight_slip.jpg"]
     whatsapp_message: Optional[str] = "Purchase From: ABC Steel..."
-    selling_rate: Optional[float] = None
-
-class CreateDraftInvoiceRequest(BaseModel):
-    selling_rate: Optional[float] = None
 
 class ApprovalRequest(BaseModel):
     decision: str
@@ -202,7 +198,6 @@ async def dispatch_intake(
     current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
     db: AsyncSession = Depends(get_db)
 ):
-    rate_val = Decimal(str(payload.selling_rate)) if payload and payload.selling_rate is not None else Decimal("58.00")
     dispatch = await crud.create_dispatch(
         db=db,
         po_number=payload.po_number or "PO-98765",
@@ -210,7 +205,7 @@ async def dispatch_intake(
         documents=payload.documents,
         whatsapp_message=payload.whatsapp_message,
         customer_name="XYZ Industries",
-        selling_rate=rate_val,
+        selling_rate=Decimal("58.00"),
         purchase_rate=Decimal("50.00")
     )
     await log_audit_db(db, dispatch.id, "DISPATCH_CREATED", user_id_str=current_user["role"], new_val={"status": dispatch.status})
@@ -384,15 +379,10 @@ async def create_purchase_bill(
 @app.post("/api/v1/dispatches/{dispatch_id}/create-draft-invoice", tags=["Zoho Integration"])
 async def create_draft_invoice_endpoint(
     dispatch_id: str,
-    payload: Optional[CreateDraftInvoiceRequest] = None,
     current_user: dict = Depends(require_roles(["Admin"])),
     db: AsyncSession = Depends(get_db)
 ):
     dispatch = await resolve_dispatch(db, dispatch_id)
-
-    if payload and payload.selling_rate is not None:
-        dispatch.selling_rate = Decimal(str(payload.selling_rate))
-        await db.commit()
 
     job_key = f"{dispatch.id}_CREATE_DRAFT_INVOICE"
     if job_key not in JOB_LOCKS:
@@ -411,8 +401,8 @@ async def create_draft_invoice_endpoint(
                 detail=f"Cannot create invoice: Dispatch status is '{dispatch.status}', expected 'APPROVED'"
             )
 
-        po_selling_rate = dispatch.selling_rate or Decimal("58.00")
-        expected_quantity = dispatch.weight_kg or Decimal("12500")
+        po_selling_rate = Decimal("58.00")
+        expected_quantity = Decimal("12500")
 
         try:
             if settings.ZOHO_REFRESH_TOKEN:

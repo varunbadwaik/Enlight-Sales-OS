@@ -19,7 +19,6 @@ interface DraftInvoiceItem {
 
 export default function InvoicesPage() {
   const [draftInvoices, setDraftInvoices] = useState<DraftInvoiceItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
   const fetchInvoices = async () => {
     try {
@@ -43,8 +42,6 @@ export default function InvoicesPage() {
       }
     } catch (err) {
       console.error('Error fetching invoices:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -56,55 +53,46 @@ export default function InvoicesPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0F172A', letterSpacing: '-0.5px' }}>
-            Zoho Books Draft Sales Invoices
-          </h1>
-          <p style={{ color: '#64748B', marginTop: '4px', fontSize: '14px', fontWeight: '500' }}>
-            Overview of live draft invoices generated in Zoho Books (Org: 60082578964). Selling rate strictly locked to Customer PO (₹58.00/kg).
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CARE & PIPELINE</div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Zoho Draft Invoices</h1>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            {draftInvoices.length} draft invoices created — rate locked at ₹58.00/kg in Zoho Books (Org: 60082578964).
           </p>
         </div>
-        <button onClick={fetchInvoices} className="btn-secondary">
-          🔄 Refresh Invoices
+
+        <button onClick={fetchInvoices} className="btn-dark-pill">
+          <span>🔄 Sync Invoices</span>
         </button>
       </div>
 
-      {/* Statutory Banner */}
-      <div style={{
-        background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px',
-        padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '14px'
-      }}>
-        <div style={{ fontSize: '24px' }}>🛡️</div>
-        <div>
-          <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E40AF' }}>
-            Statutory & Legal Scope Control
-          </div>
-          <div style={{ fontSize: '13px', color: '#1E3A8A', marginTop: '2px' }}>
-            All invoices created by Enlight AI remain strictly in <strong>DRAFT</strong> status. Accountants perform final verification, E-Way Bill generation, and digital signing manually in Zoho Books.
-          </div>
+      {/* Filter Control Bar */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="🔍 Name or ID..."
+            className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-400 w-48 shadow-sm"
+          />
+          <button className="filter-pill active">All Drafts ({draftInvoices.length})</button>
+          <button className="filter-pill">WhatsApp Sourced</button>
+        </div>
+        <div className="text-xs font-semibold text-slate-500">
+          Showing 1 to {draftInvoices.length} of {draftInvoices.length}
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="card-container">
-        <div className="card-header">
-          <h2 className="card-title">Live Draft Invoices ({draftInvoices.length})</h2>
-          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>Auto-synced with Zoho Books</span>
-        </div>
-
-        <table className="data-table">
+      {/* Clean Table Container */}
+      <div className="card-clean p-0 overflow-hidden">
+        <table className="table-clean">
           <thead>
             <tr>
               <th>Zoho Invoice ID</th>
-              <th>Dispatch Ref</th>
-              <th>Customer</th>
-              <th>PO Number</th>
-              <th>Source</th>
-              <th>Locked Rate</th>
-              <th>Total Weight</th>
-              <th>Total Amount</th>
+              <th>Customer Name</th>
+              <th>PO & Dispatch Ref</th>
+              <th>Weight & Total</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -114,38 +102,23 @@ export default function InvoicesPage() {
               const zohoId = item.zoho_sales_invoice_id || item.invoice_id;
               return (
                 <tr key={item.invoice_id}>
-                  <td style={{ fontWeight: '800', color: '#2563EB', fontFamily: 'monospace' }}>
+                  <td className="font-bold text-slate-900 font-mono">
                     {zohoId}
                   </td>
+                  <td className="font-semibold text-slate-900">{item.customer_name}</td>
+                  <td className="text-slate-600 font-medium">{item.po_number} · {item.dispatch_id}</td>
+                  <td className="text-slate-900 font-bold">{item.weight_kg} — <span className="text-blue-600">{item.total_amount}</span></td>
                   <td>
-                    <Link href={`/dispatches/${item.dispatch_id}`} style={{ fontWeight: '700', color: '#475569', textDecoration: 'none' }}>
-                      {item.dispatch_id}
-                    </Link>
-                  </td>
-                  <td style={{ color: '#0F172A', fontWeight: '700' }}>{item.customer_name}</td>
-                  <td style={{ color: '#475569', fontWeight: '600' }}>{item.po_number}</td>
-                  <td>
-                    <span className={`source-badge ${item.source === 'WHATSAPP' ? 'source-whatsapp' : 'source-web'}`}>
-                      {item.source === 'WHATSAPP' ? '💬 WhatsApp' : '🌐 Web Portal'}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: '800', color: '#059669' }}>{item.selling_rate}</td>
-                  <td style={{ fontWeight: '700' }}>{item.weight_kg}</td>
-                  <td style={{ fontWeight: '800', color: '#0F172A' }}>{item.total_amount}</td>
-                  <td>
-                    <span className="badge badge-draft">
-                      <span className="badge-pulse" />
-                      {item.status}
-                    </span>
+                    <span className="status-badge issued">• Draft Issued</span>
                   </td>
                   <td>
                     <a
                       href={`https://books.zoho.in/app/60082578964#/invoices/${zohoId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-zoho"
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
                     >
-                      🔗 Open in Zoho Books
+                      Open in Zoho →
                     </a>
                   </td>
                 </tr>

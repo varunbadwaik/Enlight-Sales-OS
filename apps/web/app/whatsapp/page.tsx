@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 
 interface WhatsAppSessionItem {
   id: string;
@@ -19,7 +18,6 @@ interface WhatsAppSessionItem {
 
 export default function WhatsAppSessionsPage() {
   const [sessions, setSessions] = useState<WhatsAppSessionItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [testMessage, setTestMessage] = useState<string>(
 `Purchase From : Tata Steel Ltd
 Sale To       : Reliance Industries Ltd
@@ -52,8 +50,6 @@ Dispatch      : 12-08-2026`
       }
     } catch (err) {
       console.error('Error fetching sessions:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -67,18 +63,15 @@ Dispatch      : 12-08-2026`
     setSimulating(true);
     setSimResponse(null);
     try {
-      const activeRate = typeof window !== 'undefined' ? localStorage.getItem('customer_po_rate') || '58.00' : '58.00';
       const res = await fetch('http://localhost:8000/api/v1/whatsapp/agent/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           From: 'whatsapp:+917588353703',
-          Body: testMessage,
-          selling_rate: activeRate
+          Body: testMessage
         })
       });
       const text = await res.text();
-      // Clean XML tags for UI rendering
       const cleanText = text.replace(/<[^>]+>/g, '').trim();
       setSimResponse(cleanText);
       fetchSessions();
@@ -91,108 +84,87 @@ Dispatch      : 12-08-2026`
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0F172A', letterSpacing: '-0.5px' }}>
-              WhatsApp AI Agent Command Center
-            </h1>
-            <span className="badge badge-validated" style={{ backgroundColor: '#25D366', color: '#FFFFFF', border: 'none' }}>
-              <span className="badge-pulse" style={{ backgroundColor: '#FFF' }} /> Live Gemini 2.5 Active
-            </span>
-          </div>
-          <p style={{ color: '#64748B', marginTop: '4px', fontSize: '14px', fontWeight: '500' }}>
-            Real-time document collection, multimodal vision extraction, and automated Zoho draft creation.
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CONSULTING ROOM</div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">WhatsApp AI Agent</h1>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Gemini 2.5 Multimodal Vision parsing & automated Zoho draft creation.
           </p>
         </div>
-        <button onClick={fetchSessions} className="btn-secondary">
-          🔄 Refresh Sessions
+
+        <button onClick={fetchSessions} className="btn-dark-pill">
+          <span>🔄 Sync Sessions</span>
         </button>
       </div>
 
       {/* Grid Layout: Live Simulator + Active Sessions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+      <div className="grid grid-cols-2 gap-6">
         {/* Interactive Simulator */}
-        <div className="card-container" style={{ padding: '24px' }}>
-          <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>💬 Live WhatsApp Message Simulator</span>
+        <div className="card-clean">
+          <div className="text-sm font-extrabold text-slate-900 mb-2 flex items-center gap-2">
+            <span>💬 Live Message Simulator</span>
           </div>
-          <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>
-            Send dispatch template directly to test Gemini 2.5 Flash parsing & Zoho Books live draft invoice creation:
+          <p className="text-xs text-slate-500 mb-3 font-medium">
+            Test Gemini 2.5 Flash parsing & Zoho Books live draft invoice creation:
           </p>
 
           <textarea
             value={testMessage}
             onChange={(e) => setTestMessage(e.target.value)}
             rows={8}
-            style={{
-              width: '100%', padding: '14px', borderRadius: '10px',
-              border: '1px solid #CBD5E1', fontFamily: 'monospace', fontSize: '13px',
-              backgroundColor: '#F8FAFC', color: '#0F172A', marginBottom: '16px',
-              outline: 'none', resize: 'vertical'
-            }}
+            className="w-full p-3 rounded-lg border border-slate-200 font-mono text-xs bg-slate-50 text-slate-900 mb-3 focus:outline-none focus:bg-white focus:border-slate-400"
           />
 
           <button
             onClick={handleSimulateWhatsApp}
             disabled={simulating}
-            className="btn-primary"
-            style={{ width: '100%', justifyContent: 'center', backgroundColor: '#25D366' }}
+            className="btn-dark-pill w-full justify-center"
           >
-            {simulating ? '⏳ Gemini 2.5 Processing...' : '🚀 Send WhatsApp Dispatch Message'}
+            {simulating ? '⏳ Gemini Processing...' : '🚀 Send WhatsApp Dispatch'}
           </button>
 
           {simResponse && (
-            <div style={{
-              marginTop: '20px', background: '#0F172A', color: '#38BDF8',
-              padding: '16px', borderRadius: '10px', fontSize: '13px',
-              whiteSpace: 'pre-wrap', border: '1px solid #1E293B', fontFamily: 'monospace'
-            }}>
+            <div className="mt-4 bg-slate-900 color-blue-400 p-3 rounded-lg text-xs font-mono text-cyan-300">
               {simResponse}
             </div>
           )}
         </div>
 
         {/* Live Active Sessions Card */}
-        <div className="card-container" style={{ padding: '24px' }}>
-          <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="card-clean">
+          <div className="text-sm font-extrabold text-slate-900 mb-2 flex items-center gap-2">
             <span>📱 Active Agent Phone Sessions</span>
           </div>
-          <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>
+          <p className="text-xs text-slate-500 mb-3 font-medium">
             Live status of active driver/accountant WhatsApp phone numbers:
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="flex flex-col gap-3">
             {sessions.map((sess) => (
-              <div key={sess.id} style={{
-                background: '#F8FAFC', border: '1px solid #E2E8F0',
-                borderRadius: '12px', padding: '16px', display: 'flex',
-                alignItems: 'center', justifyContent: 'space-between'
-              }}>
+              <div key={sess.id} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center justify-between">
                 <div>
-                  <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '15px' }}>
+                  <div className="font-bold text-slate-900 text-sm">
                     {sess.whatsapp_number}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', fontWeight: '600' }}>
+                  <div className="text-xs text-slate-500 mt-0.5 font-medium">
                     PO: {sess.po_number || 'PO-98765'} | Dispatch: {sess.dispatch_id || 'DSP-98765'}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                  <span className="badge badge-validated">
-                    <span className="badge-pulse" />
-                    {sess.session_status}
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className="status-badge issued">
+                    • {sess.session_status}
                   </span>
                   {sess.invoice_id && (
                     <a
                       href={`https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-zoho"
-                      style={{ fontSize: '11px', padding: '4px 8px' }}
+                      className="text-xs font-bold text-blue-600 hover:underline"
                     >
-                      🔗 Zoho Draft
+                      Open Zoho Draft →
                     </a>
                   )}
                 </div>
