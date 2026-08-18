@@ -389,26 +389,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Role Selection */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-300">System Role (RBAC)</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['Admin', 'Accountant', 'Dispatch'] as const).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                      role === r 
-                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md' 
-                        : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <button
               type="submit"
