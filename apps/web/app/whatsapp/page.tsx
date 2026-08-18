@@ -103,7 +103,7 @@ Dispatch      : 12-08-2026`
           `• Weight (kg): 10 kg\n` +
           `• Rate Lock Applied: ₹${savedRate}/kg\n` +
           `• Dispatch ID: DSP-66666\n` +
-          `• Zoho Books Invoice: #4102947000000055007 (Status: DRAFT)`
+          `• Zoho Books Org: #60082578964 (Status: DRAFT)`
         );
 
         // Append simulated session to sessions list
@@ -217,20 +217,18 @@ Dispatch      : 12-08-2026`
                   <span className="status-pill status-pill-emerald">
                     • {sess.session_status}
                   </span>
-                  {sess.invoice_id && (
-                    <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        fontSize: '11px', padding: '4px 8px', backgroundColor: '#0F172A',
-                        color: '#FFFFFF', borderRadius: '4px', textDecoration: 'none',
-                        fontWeight: '700'
-                      }}
-                    >
-                      🔗 Zoho Draft
-                    </a>
-                  )}
+                  <a
+                    href="https://books.zoho.in/app/60082578964#/invoices"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: '11px', padding: '4px 8px', backgroundColor: '#0F172A',
+                      color: '#FFFFFF', borderRadius: '4px', textDecoration: 'none',
+                      fontWeight: '700'
+                    }}
+                  >
+                    🔗 Zoho Books Org
+                  </a>
                 </div>
               </div>
             ))}

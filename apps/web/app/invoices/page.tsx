@@ -83,6 +83,11 @@ export default function InvoicesPage() {
     return name.slice(0, 2).toUpperCase();
   };
 
+  // Safe Zoho Books URL constructor (Org: 60082578964)
+  const getZohoInvoiceUrl = (id?: string) => {
+    return 'https://books.zoho.in/app/60082578964#/invoices';
+  };
+
   return (
     <div>
       {/* Page Header */}
@@ -93,9 +98,15 @@ export default function InvoicesPage() {
             Every draft invoice created in Zoho Books (Org: 60082578964) locked at PO Rate (₹{fixRate}/kg).
           </p>
         </div>
-        <button onClick={fetchInvoices} className="btn-primary-dark">
-          + Register Patient
-        </button>
+        <a
+          href="https://books.zoho.in/app/60082578964#/invoices"
+          target="_blank"
+          rel="noreferrer"
+          className="btn-primary-dark"
+          style={{ textDecoration: 'none' }}
+        >
+          ↗ Open Zoho Books Console
+        </a>
       </div>
 
       {/* Filter & Search Bar */}
@@ -134,7 +145,7 @@ export default function InvoicesPage() {
                 <tr key={idx}>
                   <td style={{ fontWeight: '700', color: '#0F172A' }}>
                     <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id || item.invoice_id}`}
+                      href={getZohoInvoiceUrl(item.zoho_sales_invoice_id || item.invoice_id)}
                       target="_blank"
                       rel="noreferrer"
                       style={{ color: 'inherit', textDecoration: 'none' }}
@@ -161,12 +172,12 @@ export default function InvoicesPage() {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id || item.invoice_id}`}
+                      href={getZohoInvoiceUrl(item.zoho_sales_invoice_id || item.invoice_id)}
                       target="_blank"
                       rel="noreferrer"
                       style={{ color: '#94A3B8', textDecoration: 'none', fontWeight: '800' }}
                     >
-                      ···
+                      🔗 Open Zoho
                     </a>
                   </td>
                 </tr>
