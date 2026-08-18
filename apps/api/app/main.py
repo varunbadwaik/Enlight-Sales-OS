@@ -409,7 +409,7 @@ async def create_draft_invoice_endpoint(
         await db.refresh(dispatch)
 
         curr_global_rate = float(get_current_selling_rate())
-        effective_rate = selling_rate if (selling_rate and selling_rate != 58.00) else curr_global_rate
+        effective_rate = selling_rate if selling_rate else curr_global_rate
         po_selling_rate = Decimal(str(effective_rate))
         expected_quantity = dispatch.weight_kg or Decimal("12500")
 
