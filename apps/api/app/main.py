@@ -202,7 +202,7 @@ async def dispatch_intake(
     current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
     db: AsyncSession = Depends(get_db)
 ):
-    rate_to_apply = Decimal(str(payload.selling_rate)) if payload.selling_rate is not None else Decimal("58.00")
+    rate_val = Decimal(str(payload.selling_rate)) if payload and payload.selling_rate is not None else Decimal("58.00")
     dispatch = await crud.create_dispatch(
         db=db,
         po_number=payload.po_number or "PO-98765",
@@ -210,7 +210,7 @@ async def dispatch_intake(
         documents=payload.documents,
         whatsapp_message=payload.whatsapp_message,
         customer_name="XYZ Industries",
-        selling_rate=rate_to_apply,
+        selling_rate=rate_val,
         purchase_rate=Decimal("50.00")
     )
     await log_audit_db(db, dispatch.id, "DISPATCH_CREATED", user_id_str=current_user["role"], new_val={"status": dispatch.status})

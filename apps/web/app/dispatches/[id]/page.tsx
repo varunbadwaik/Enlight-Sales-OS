@@ -42,7 +42,7 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
       const approveData = await approveRes.json();
       setApprovalDecision('APPROVED');
 
-      // Step 2: Call API to Create Draft Sales Invoice (Customer PO Rate Lock)
+      // Step 2: Call API to Create Draft Sales Invoice (Customer PO Rate Lock from UI)
       const currentRate = parseFloat(poRate || '58.00');
       const invoiceRes = await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/create-draft-invoice`, {
         method: 'POST',

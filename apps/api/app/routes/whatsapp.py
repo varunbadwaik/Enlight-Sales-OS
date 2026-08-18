@@ -175,7 +175,7 @@ async def whatsapp_agent_webhook(
         parsed_material = f"{m_grade} - {m_size}" if m_grade and m_size else (m_grade or m_size or "Food Grade - 55kg Bags")
         parsed_lr = gemini_parsed.get("transporter") or (lr_match.group(1).strip() if lr_match else "VRL Logistics")
 
-        rate_val = Decimal(str(selling_rate)) if selling_rate and str(selling_rate).replace('.', '', 1).isdigit() else Decimal("58.00")
+        rate_val = Decimal(str(selling_rate)) if selling_rate and str(selling_rate).replace('.', '', 1).isdigit() else (Decimal(str(gemini_parsed.get("selling_rate"))) if gemini_parsed.get("selling_rate") else Decimal("58.00"))
 
         # Create Dispatch record with source="WHATSAPP"
         dispatch = await crud.create_dispatch(
