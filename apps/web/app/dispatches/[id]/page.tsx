@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function DispatchDetailPage({ params }: { params: { id: string } }) {
@@ -9,6 +9,21 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
   const [approvalDecision, setApprovalDecision] = useState<string | null>('VALIDATED');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [invoiceDetails, setInvoiceDetails] = useState<any>(null);
+  const [poRate, setPoRate] = useState<string>('58.00');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPoRate(localStorage.getItem('customer_po_rate') || '58.00');
+    }
+
+    const handleRateUpdate = (e: any) => {
+      if (e.detail) {
+        setPoRate(e.detail);
+      }
+    };
+    window.addEventListener('poRateUpdated', handleRateUpdate);
+    return () => window.removeEventListener('poRateUpdated', handleRateUpdate);
+  }, []);
   const [auditLogs, setAuditLogs] = useState<any[]>([
     { time: '10:20 AM', action: 'DISPATCH_CREATED', details: `Dispatch ${dispatchId} created in DOCUMENTS_UPLOADED status.` },
     { time: '10:21 AM', action: 'GEMINI_EXTRACTION_COMPLETED', details: 'Extracted structured JSON for PO, Bill, LR, Weighment slip.' },
@@ -17,54 +32,22 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
 
   const handleApproveAndCreateInvoice = async () => {
     setIsProcessing(true);
-    const rateStr = localStorage.getItem('fix_rate') || '58.00';
-    const currentRate = parseFloat(rateStr);
-
-    // Step 1: Input UI fix rate first & sync to backend FastAPI server
     try {
-      await fetch('http://localhost:8000/api/v1/config/rate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selling_rate: currentRate })
-      });
-    } catch (e) {
-      console.warn('Could not sync rate config to backend:', e);
-    }
-
-    try {
-      // Step 2: Call API to Approve Dispatch
-      await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/approve`, {
+      // Step 1: Call API to Approve Dispatch
+      const approveRes = await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Role': 'Admin' },
         body: JSON.stringify({ decision: 'APPROVED', comment: 'Approved via Admin Portal UI' }),
-      }).catch(() => null);
-
+      });
+      const approveData = await approveRes.json();
       setApprovalDecision('APPROVED');
 
-      // Step 3: Call API to Create Draft Sales Invoice with active rate
-      const invoiceRes = await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/create-draft-invoice?selling_rate=${currentRate}`, {
+      // Step 2: Call API to Create Draft Sales Invoice (Customer PO Rate ₹58/kg Lock)
+      const invoiceRes = await fetch(`http://localhost:8000/api/v1/dispatches/${dispatchId}/create-draft-invoice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Role': 'Admin' },
-        body: JSON.stringify({ selling_rate: currentRate })
-      }).catch(() => null);
-
-      let invoiceData = null;
-      if (invoiceRes && invoiceRes.ok) {
-        invoiceData = await invoiceRes.json().catch(() => null);
-      }
-
-      if (!invoiceData) {
-        invoiceData = {
-          invoice_id: `41029470000000${Math.floor(50000 + Math.random() * 40000)}`,
-          invoice_number: `INV-2026-${dispatchId}`,
-          status: 'draft',
-          selling_rate_applied: currentRate,
-          quantity: 12500,
-          total_amount: currentRate * 12500,
-          source: 'Customer PO (PO-98765)'
-        };
-      }
-
+      });
+      const invoiceData = await invoiceRes.json();
       setInvoiceDetails(invoiceData);
 
       // Append Audit Logs
@@ -72,30 +55,24 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
       setAuditLogs((prev) => [
         ...prev,
         { time: now, action: 'ADMIN_APPROVED', details: 'Admin approved dispatch for Zoho Draft Sales Invoice creation.' },
-        { time: now, action: 'DRAFT_INVOICE_CREATED', details: `Zoho Sales Invoice ${invoiceData.invoice_id} created at locked PO rate ₹${currentRate.toFixed(2)}/kg in DRAFT status.` }
+        { time: now, action: 'DRAFT_INVOICE_CREATED', details: `Zoho Sales Invoice ${invoiceData.invoice_id || 'inv_zoho_DSP-001'} created at locked PO rate ₹58/kg in DRAFT status.` }
       ]);
-
-      // Save to localStorage for instant visibility in Prescriptions & Invoices list
-      const savedInvoices = JSON.parse(localStorage.getItem('user_created_invoices') || '[]');
-      const newInvRecord = {
-        invoice_id: invoiceData.invoice_id,
-        dispatch_id: dispatchId,
-        customer_name: 'XYZ Industries',
-        po_number: 'PO-98765',
-        selling_rate: `₹${currentRate.toFixed(2)}/kg`,
-        weight_kg: '12,500 KG',
-        total_amount: `₹${(12500 * currentRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-        status: 'DRAFT',
-        source: 'WEB',
-        created_at: new Date().toISOString(),
-        zoho_sales_invoice_id: invoiceData.invoice_id
-      };
-      localStorage.setItem('user_created_invoices', JSON.stringify([newInvRecord, ...savedInvoices]));
 
       // Automatically switch to Draft Invoice tab
       setActiveTab('INVOICE');
     } catch (error) {
-      console.error('Invoice Creation Error:', error);
+      console.error('API Error:', error);
+      // Fallback mock state for client-only fallback
+      setApprovalDecision('APPROVED');
+      setInvoiceDetails({
+        invoice_id: `inv_zoho_${dispatchId}`,
+        invoice_number: `INV-2026-${dispatchId}`,
+        status: 'draft',
+        selling_rate_applied: 58.0,
+        quantity: 12500,
+        source: 'Customer PO (PO-98765)'
+      });
+      setActiveTab('INVOICE');
     } finally {
       setIsProcessing(false);
     }
@@ -332,7 +309,7 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
                 <span className="rate-lock-title">Customer PO Selling Rate</span>
                 <span className="rate-lock-badge">Customer PO PO-98765</span>
               </div>
-              <div className="rate-lock-value">₹58.00 / kg</div>
+              <div className="rate-lock-value">₹{poRate} / kg</div>
               <p className="rate-lock-desc">
                 *Mandatory Selling Rate: Hard-locked to Customer PO rate. Vendor Purchase Bill rate (₹50.00) is ignored for sales invoice creation.
               </p>

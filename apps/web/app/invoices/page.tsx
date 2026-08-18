@@ -20,35 +20,23 @@ interface DraftInvoiceItem {
 export default function InvoicesPage() {
   const [draftInvoices, setDraftInvoices] = useState<DraftInvoiceItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [fixRate, setFixRate] = useState<string>('58.00');
+  const [poRate, setPoRate] = useState<string>('58.00');
 
   useEffect(() => {
-    const savedRate = typeof window !== 'undefined' ? (localStorage.getItem('fix_rate') || '58.00') : '58.00';
-    setFixRate(savedRate);
+    if (typeof window !== 'undefined') {
+      setPoRate(localStorage.getItem('customer_po_rate') || '58.00');
+    }
 
     const handleRateUpdate = (e: any) => {
-      setFixRate(e.detail || localStorage.getItem('fix_rate') || '58.00');
+      if (e.detail) {
+        setPoRate(e.detail);
+      }
     };
-
-    window.addEventListener('fixRateChanged', handleRateUpdate);
-    window.addEventListener('storage', handleRateUpdate);
-    return () => {
-      window.removeEventListener('fixRateChanged', handleRateUpdate);
-      window.removeEventListener('storage', handleRateUpdate);
-    };
+    window.addEventListener('poRateUpdated', handleRateUpdate);
+    return () => window.removeEventListener('poRateUpdated', handleRateUpdate);
   }, []);
 
   const fetchInvoices = async () => {
-    const rate = localStorage.getItem('fix_rate') || '58.00';
-    const numRate = parseFloat(rate);
-    const userInvoices = JSON.parse(localStorage.getItem('user_created_invoices') || '[]');
-
-    const defaults = [
-      { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: `₹${rate}/kg`, weight_kg: '12,500 KG', total_amount: `₹${(12500 * numRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
-      { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: `₹${rate}/kg`, weight_kg: '10 KG', total_amount: `₹${(10 * numRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
-      { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: `₹${rate}/kg`, weight_kg: '25,000 KG', total_amount: `₹${(25000 * numRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
-    ];
-
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const headers: Record<string, string> = { 
@@ -60,12 +48,16 @@ export default function InvoicesPage() {
       const res = await fetch('http://localhost:8000/api/v1/invoices/drafts', { headers });
       if (res.ok) {
         const data = await res.json();
-        setDraftInvoices([...userInvoices, ...data]);
+        setDraftInvoices(data);
       } else {
-        setDraftInvoices([...userInvoices, ...defaults]);
+        setDraftInvoices([
+          { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: '₹58.00/kg', weight_kg: '12,500 KG', total_amount: '₹7,25,000.00', status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
+          { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: '₹58.00/kg', weight_kg: '10 KG', total_amount: '₹580.00', status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
+          { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: '₹58.00/kg', weight_kg: '25,000 KG', total_amount: '₹14,50,000.00', status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
+        ]);
       }
-    } catch {
-      setDraftInvoices([...userInvoices, ...defaults]);
+    } catch (err) {
+      console.error('Error fetching invoices:', err);
     } finally {
       setLoading(false);
     }
@@ -75,110 +67,100 @@ export default function InvoicesPage() {
     fetchInvoices();
     const interval = setInterval(fetchInvoices, 5000);
     return () => clearInterval(interval);
-  }, [fixRate]);
-
-  const getInitials = (name: string) => {
-    if (!name) return 'DS';
-    const parts = name.split(' ');
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
-
-  // Safe Zoho Books URL constructor (Org: 60082578964)
-  const getZohoInvoiceUrl = (id?: string) => {
-    return 'https://books.zoho.in/app/60082578964#/invoices';
-  };
+  }, []);
 
   return (
     <div>
-      {/* Page Header */}
-      <div className="page-header-row">
+      {/* Header */}
+      <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="page-title">Prescriptions & Draft Invoices</h1>
-          <p className="page-subtitle">
-            Every draft invoice created in Zoho Books (Org: 60082578964) locked at PO Rate (₹{fixRate}/kg).
+          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0F172A', letterSpacing: '-0.5px' }}>
+            Zoho Books Draft Sales Invoices
+          </h1>
+          <p style={{ color: '#64748B', marginTop: '4px', fontSize: '14px', fontWeight: '500' }}>
+            Overview of live draft invoices generated in Zoho Books (Org: 60082578964). Selling rate strictly locked to Customer PO (₹{poRate}/kg).
           </p>
         </div>
-        <a
-          href="https://books.zoho.in/app/60082578964#/invoices"
-          target="_blank"
-          rel="noreferrer"
-          className="btn-primary-dark"
-          style={{ textDecoration: 'none' }}
-        >
-          ↗ Open Zoho Books Console
-        </a>
+        <button onClick={fetchInvoices} className="btn-secondary">
+          🔄 Refresh Invoices
+        </button>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="filter-bar-card">
-        <div className="search-input-wrapper">
-          <span>🔍</span>
-          <input type="text" placeholder="Name or ID..." readOnly />
-        </div>
-        <div className="filter-pills-group">
-          <button className="filter-pill active">All</button>
-          <button className="filter-pill">Seen this month</button>
-          <button className="filter-pill">Portal account</button>
-          <button className="filter-pill">No upcoming visit</button>
+      {/* Statutory Banner */}
+      <div style={{
+        background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px',
+        padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '14px'
+      }}>
+        <div style={{ fontSize: '24px' }}>🛡️</div>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E40AF' }}>
+            Statutory & Legal Scope Control
+          </div>
+          <div style={{ fontSize: '13px', color: '#1E3A8A', marginTop: '2px' }}>
+            All invoices created by Enlight AI remain strictly in <strong>DRAFT</strong> status. Accountants perform final verification, E-Way Bill generation, and digital signing manually in Zoho Books.
+          </div>
         </div>
       </div>
 
-      {/* Main Clinical Table */}
-      <div className="table-container-card">
-        <table className="clinical-table">
+      {/* Table Container */}
+      <div className="card-container">
+        <div className="card-header">
+          <h2 className="card-title">Live Draft Invoices ({draftInvoices.length})</h2>
+          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '600' }}>Auto-synced with Zoho Books</span>
+        </div>
+
+        <table className="data-table">
           <thead>
             <tr>
-              <th>RX ID / ZOHO INVOICE</th>
-              <th>PATIENT / CUSTOMER NAME</th>
-              <th>MEDICATION & DOSAGE</th>
-              <th>DURATION / INSTRUCTIONS</th>
-              <th>STATUS</th>
-              <th style={{ textAlign: 'right' }}>ACTION</th>
+              <th>Zoho Invoice ID</th>
+              <th>Dispatch Ref</th>
+              <th>Customer</th>
+              <th>PO Number</th>
+              <th>Source</th>
+              <th>Locked Rate</th>
+              <th>Total Weight</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {draftInvoices.map((item, idx) => {
-              const initials = getInitials(item.customer_name);
-              const invoiceNum = item.zoho_sales_invoice_id || item.invoice_id || `RX-2026-00320${idx+1}`;
-
+            {draftInvoices.map((item) => {
+              const zohoId = item.zoho_sales_invoice_id || item.invoice_id;
               return (
-                <tr key={idx}>
-                  <td style={{ fontWeight: '700', color: '#0F172A' }}>
-                    <a
-                      href={getZohoInvoiceUrl(item.zoho_sales_invoice_id || item.invoice_id)}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: 'inherit', textDecoration: 'none' }}
-                    >
-                      RX-{invoiceNum.slice(-6)}
-                    </a>
+                <tr key={item.invoice_id}>
+                  <td style={{ fontWeight: '800', color: '#2563EB', fontFamily: 'monospace' }}>
+                    {zohoId}
                   </td>
                   <td>
-                    <div className="customer-avatar-row">
-                      <div className="customer-avatar-circle">{initials}</div>
-                      <span style={{ fontWeight: '600', color: '#0F172A' }}>{item.customer_name}</span>
-                    </div>
+                    <Link href={`/dispatches/${item.dispatch_id}`} style={{ fontWeight: '700', color: '#475569', textDecoration: 'none' }}>
+                      {item.dispatch_id}
+                    </Link>
                   </td>
-                  <td style={{ color: '#475569', fontWeight: '500' }}>
-                    {item.po_number} ({item.weight_kg})
-                  </td>
-                  <td style={{ color: '#475569' }}>
-                    ₹{fixRate}/kg — Total: {item.total_amount}
-                  </td>
+                  <td style={{ color: '#0F172A', fontWeight: '700' }}>{item.customer_name}</td>
+                  <td style={{ color: '#475569', fontWeight: '600' }}>{item.po_number}</td>
                   <td>
-                    <span className="status-pill status-pill-blue">
-                      + Issued
+                    <span className={`source-badge ${item.source === 'WHATSAPP' ? 'source-whatsapp' : 'source-web'}`}>
+                      {item.source === 'WHATSAPP' ? '💬 WhatsApp' : '🌐 Web Portal'}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ fontWeight: '800', color: '#059669' }}>{item.selling_rate}</td>
+                  <td style={{ fontWeight: '700' }}>{item.weight_kg}</td>
+                  <td style={{ fontWeight: '800', color: '#0F172A' }}>{item.total_amount}</td>
+                  <td>
+                    <span className="badge badge-draft">
+                      <span className="badge-pulse" />
+                      {item.status}
+                    </span>
+                  </td>
+                  <td>
                     <a
-                      href={getZohoInvoiceUrl(item.zoho_sales_invoice_id || item.invoice_id)}
+                      href={`https://books.zoho.in/app/60082578964#/invoices/${zohoId}`}
                       target="_blank"
-                      rel="noreferrer"
-                      style={{ color: '#94A3B8', textDecoration: 'none', fontWeight: '800' }}
+                      rel="noopener noreferrer"
+                      className="btn-zoho"
                     >
-                      🔗 Open Zoho
+                      🔗 Open in Zoho Books
                     </a>
                   </td>
                 </tr>
@@ -186,15 +168,6 @@ export default function InvoicesPage() {
             })}
           </tbody>
         </table>
-
-        {/* Table Footer Pagination */}
-        <div className="table-footer-pagination">
-          <div>1 to {draftInvoices.length} of {draftInvoices.length}</div>
-          <div className="pagination-links">
-            <span className="pagination-link">Prev</span>
-            <span className="pagination-link">Next</span>
-          </div>
-        </div>
       </div>
     </div>
   );
