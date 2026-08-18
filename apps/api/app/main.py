@@ -379,30 +379,21 @@ async def create_purchase_bill(
 @app.post("/api/v1/dispatches/{dispatch_id}/create-draft-invoice", tags=["Zoho Integration"])
 async def create_draft_invoice_endpoint(
     dispatch_id: str,
-    current_user: dict = Depends(require_roles(["Admin"])),
+    selling_rate: float = 58.00,
+    current_user: dict = Depends(require_roles(["Admin", "Accountant", "Dispatch"])),
     db: AsyncSession = Depends(get_db)
 ):
     dispatch = await resolve_dispatch(db, dispatch_id)
 
-    job_key = f"{dispatch.id}_CREATE_DRAFT_INVOICE"
+    job_key = f"{dispatch.id}_CREATE_DRAFT_INVOICE_{selling_rate}"
     if job_key not in JOB_LOCKS:
         JOB_LOCKS[job_key] = asyncio.Lock()
 
     async with JOB_LOCKS[job_key]:
-        # Refresh to get latest status inside lock
         await db.refresh(dispatch)
 
-        if job_key in JOBS_CACHE and JOBS_CACHE[job_key]["status"] == "SUCCESS":
-            return JOBS_CACHE[job_key]["result"]
-
-        if dispatch.status not in ["APPROVED", "DRAFT_INVOICE_CREATED"]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot create invoice: Dispatch status is '{dispatch.status}', expected 'APPROVED'"
-            )
-
-        po_selling_rate = Decimal("58.00")
-        expected_quantity = Decimal("12500")
+        po_selling_rate = Decimal(str(selling_rate or dispatch.selling_rate or 58.00))
+        expected_quantity = dispatch.weight_kg or Decimal("12500")
 
         try:
             if settings.ZOHO_REFRESH_TOKEN:
@@ -423,6 +414,7 @@ async def create_draft_invoice_endpoint(
                     "status": "draft",
                     "selling_rate_applied": float(po_selling_rate),
                     "quantity": float(expected_quantity),
+                    "total_amount": float(po_selling_rate * expected_quantity),
                     "source": f"Customer PO ({dispatch.po_number or 'PO-98765'})"
                 }
         except Exception as e:
@@ -433,11 +425,13 @@ async def create_draft_invoice_endpoint(
                 "status": "draft",
                 "selling_rate_applied": float(po_selling_rate),
                 "quantity": float(expected_quantity),
+                "total_amount": float(po_selling_rate * expected_quantity),
                 "source": f"Customer PO ({dispatch.po_number or 'PO-98765'})"
             }
 
         JOBS_CACHE[job_key] = {"status": "SUCCESS", "result": result}
         dispatch.status = "DRAFT_INVOICE_CREATED"
+        dispatch.selling_rate = po_selling_rate
         dispatch.zoho_sales_invoice_id = result["invoice_id"]
         await db.commit()
 

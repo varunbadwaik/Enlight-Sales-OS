@@ -40,6 +40,15 @@ export default function InvoicesPage() {
 
   const fetchInvoices = async () => {
     const rate = localStorage.getItem('fix_rate') || '58.00';
+    const numRate = parseFloat(rate);
+    const userInvoices = JSON.parse(localStorage.getItem('user_created_invoices') || '[]');
+
+    const defaults = [
+      { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: `₹${rate}/kg`, weight_kg: '12,500 KG', total_amount: `₹${(12500 * numRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
+      { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: `₹${rate}/kg`, weight_kg: '10 KG', total_amount: `₹${(10 * numRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
+      { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: `₹${rate}/kg`, weight_kg: '25,000 KG', total_amount: `₹${(25000 * numRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
+    ];
+
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const headers: Record<string, string> = { 
@@ -51,20 +60,12 @@ export default function InvoicesPage() {
       const res = await fetch('http://localhost:8000/api/v1/invoices/drafts', { headers });
       if (res.ok) {
         const data = await res.json();
-        setDraftInvoices(data);
+        setDraftInvoices([...userInvoices, ...data]);
       } else {
-        setDraftInvoices([
-          { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: `₹${rate}/kg`, weight_kg: '12,500 KG', total_amount: `₹${(12500 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
-          { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: `₹${rate}/kg`, weight_kg: '10 KG', total_amount: `₹${(10 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
-          { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: `₹${rate}/kg`, weight_kg: '25,000 KG', total_amount: `₹${(25000 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
-        ]);
+        setDraftInvoices([...userInvoices, ...defaults]);
       }
     } catch {
-      setDraftInvoices([
-        { invoice_id: '4102947000000042033', dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', selling_rate: `₹${rate}/kg`, weight_kg: '12,500 KG', total_amount: `₹${(12500 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000042033' },
-        { invoice_id: '4102947000000055007', dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-TATA/1122', selling_rate: `₹${rate}/kg`, weight_kg: '10 KG', total_amount: `₹${(10 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WHATSAPP', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000055007' },
-        { invoice_id: '4102947000000054001', dispatch_id: 'DSP-001', customer_name: 'Supertech Construction', po_number: 'PO-12345', selling_rate: `₹${rate}/kg`, weight_kg: '25,000 KG', total_amount: `₹${(25000 * parseFloat(rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, status: 'DRAFT', source: 'WEB', created_at: new Date().toISOString(), zoho_sales_invoice_id: '4102947000000054001' }
-      ]);
+      setDraftInvoices([...userInvoices, ...defaults]);
     } finally {
       setLoading(false);
     }
