@@ -158,14 +158,20 @@ Dispatch      : 12-08-2026`
                     • {sess.session_status}
                   </span>
                   {sess.invoice_id && (
-                    <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold text-blue-600 hover:underline"
-                    >
-                      Open Zoho Draft →
-                    </a>
+                    /^\d+$/.test(sess.invoice_id) ? (
+                      <a
+                        href={`https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-blue-600 hover:underline"
+                      >
+                        Open Zoho Draft →
+                      </a>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        Local Invoice ({sess.invoice_id.slice(0, 12)})
+                      </span>
+                    )
                   )}
                 </div>
               </div>

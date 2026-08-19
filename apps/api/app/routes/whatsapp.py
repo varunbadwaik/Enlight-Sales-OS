@@ -208,7 +208,7 @@ async def whatsapp_agent_webhook(
                 do_number=gemini_parsed.get("do_number"),
                 so_number=gemini_parsed.get("sales_officer"),
                 driver_number=gemini_parsed.get("driver"),
-                dispatch_date=gemini_parsed.get("dispatch_location")
+                dispatch_date=str(date.today())
             )
             real_invoice_id = zoho_res.get("invoice_id")
         except Exception as err:

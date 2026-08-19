@@ -118,14 +118,23 @@ export default function InvoicesPage() {
                     <span className="status-badge issued">• Draft Issued</span>
                   </td>
                   <td>
-                    <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${zohoId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
-                    >
-                      Open in Zoho →
-                    </a>
+                    {zohoId && /^\d+$/.test(zohoId) ? (
+                      <a
+                        href={`https://books.zoho.in/app/60082578964#/invoices/${zohoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                      >
+                        Open in Zoho →
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/dispatches/${item.dispatch_id || 'DSP-001'}`}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline flex items-center gap-1"
+                      >
+                        Internal Record →
+                      </Link>
+                    )}
                   </td>
                 </tr>
               );
