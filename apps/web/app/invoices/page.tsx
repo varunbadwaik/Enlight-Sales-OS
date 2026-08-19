@@ -47,7 +47,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
-    const interval = setInterval(fetchInvoices, 5000);
+    const interval = setInterval(fetchInvoices, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -57,7 +57,13 @@ export default function InvoicesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CARE & PIPELINE</div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Zoho Draft Invoices</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Zoho Draft Invoices</h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>
+              Live Sync
+            </span>
+          </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             {draftInvoices.length} draft invoices created — rate locked at ₹58.00/kg in Zoho Books (Org: 60082578964).
           </p>

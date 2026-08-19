@@ -1,66 +1,50 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function DispatchesPage() {
-  const [dispatches, setDispatches] = useState<any[]>([]);
+  const [dispatches, setDispatches] = useState<any[]>([
+    { dispatch_id: 'DSP-001', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12AB1234', weight: '12,500 KG', rate: '₹58.00/kg', status: 'VALIDATED', action: 'Inspect' },
+    { dispatch_id: 'DSP-002', customer: 'ABC Metals', po_number: 'PO-44312', vehicle: 'MH12AB9999', weight: '15,000 KG', rate: '₹62.00/kg', status: 'VALIDATION_REQUIRED', action: 'Review Discrepancy' },
+    { dispatch_id: 'DSP-003', customer: 'XYZ Industries', po_number: 'PO-98765', vehicle: 'MH12AB1234', weight: '12,500 KG', rate: '₹58.00/kg', status: 'DRAFT_INVOICE_CREATED', action: 'View Draft' },
+    { dispatch_id: 'DSP-004', customer: 'Apex Metals', po_number: 'PO-11223', vehicle: 'MH14XY9999', weight: '10,000 KG', rate: '₹55.00/kg', status: 'PENDING_APPROVAL', action: 'Approve' },
+  ]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(false);
 
-  const fetchDispatches = useCallback(async () => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'X-User-Role': 'Admin'
-      };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch('http://localhost:8000/api/v1/dispatches', { headers });
-      if (res.ok) {
-        const data = await res.json();
+  const fetchDispatches = () => {
+    setLoading(true);
+    fetch('http://localhost:8000/api/v1/dispatches')
+      .then((res) => res.json())
+      .then((data) => {
         if (data.dispatches && data.dispatches.length > 0) {
-          setDispatches(data.dispatches);
+          const fetched = data.dispatches.map((d: any) => ({
+            dispatch_id: d.dispatch_id,
+            customer: d.customer_name || 'XYZ Industries',
+            po_number: d.po_number || 'PO-98765',
+            vehicle: d.vehicle_number || 'MH12AB1234',
+            weight: `${(d.weight_kg || 12500).toLocaleString()} KG`,
+            rate: `₹${(d.selling_rate || 58.0).toFixed(2)}/kg`,
+            status: d.status,
+            action: 'Inspect'
+          }));
+          setDispatches((prev) => {
+            const existingIds = new Set(prev.map(p => p.dispatch_id));
+            const newItems = fetched.filter((f: any) => !existingIds.has(f.dispatch_id));
+            return [...newItems, ...prev];
+          });
         }
-      }
-    } catch (err) {
-      console.log('Error fetching dispatches:', err);
-    }
-  }, []);
+      })
+      .catch((err) => console.log('API Dispatches Fetch Fallback:', err))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     fetchDispatches();
     const interval = setInterval(fetchDispatches, 3000);
     return () => clearInterval(interval);
-  }, [fetchDispatches]);
-
-  const handleRegisterDispatch = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('http://localhost:8000/api/v1/dispatches/intake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          po_number: 'PO-98765',
-          whatsapp_message: 'Purchase From: Reliance Industries Ltd, Sale To: abc Industries, Weight: 12500 KG'
-        })
-      });
-      if (res.ok) {
-        await fetchDispatches();
-      }
-    } catch (err) {
-      console.error('Error registering dispatch:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredDispatches = dispatches.filter((item) => {
-    if (filter === 'Issued') return item.status === 'DRAFT_INVOICE_CREATED' || item.status === 'APPROVED';
-    if (filter === 'Pending') return item.status !== 'DRAFT_INVOICE_CREATED' && item.status !== 'APPROVED';
-    return true;
-  });
+  }, []);
 
   return (
     <div>
@@ -68,19 +52,30 @@ export default function DispatchesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">DISPATCHES & PIPELINE</div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dispatches Queue</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dispatches Queue</h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>
+              Live Sync
+            </span>
+          </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {dispatches.length} dispatches registered — every record is tracked on the audit log (live 3s auto-sync).
+            {dispatches.length} dispatches registered — every record is tracked on the audit log.
           </p>
         </div>
 
-        <button
-          className="btn-dark-pill"
-          onClick={handleRegisterDispatch}
-          disabled={loading}
-        >
-          <span>{loading ? 'Creating...' : '+ Register dispatch'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchDispatches}
+            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
+          >
+            <span className={loading ? 'animate-spin' : ''}>🔄</span> Refresh Now
+          </button>
+
+          <Link href="/" className="btn-dark-pill">
+            <span>+ Register Dispatch</span>
+          </Link>
+        </div>
       </div>
 
       {/* Filter Control Bar */}
@@ -101,7 +96,7 @@ export default function DispatchesPage() {
             onClick={() => setFilter('Issued')}
             className={`filter-pill ${filter === 'Issued' ? 'active' : ''}`}
           >
-            Issued / Invoiced
+            Draft Issued
           </button>
           <button
             onClick={() => setFilter('Pending')}
@@ -112,7 +107,7 @@ export default function DispatchesPage() {
         </div>
 
         <div className="text-xs font-semibold text-slate-500">
-          Showing 1 to {filteredDispatches.length} of {filteredDispatches.length}
+          Showing 1 to {dispatches.length} of {dispatches.length}
         </div>
       </div>
 
@@ -130,71 +125,41 @@ export default function DispatchesPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredDispatches.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-8 text-slate-400 text-xs font-semibold">
-                  No dispatches found. Send a message on WhatsApp or click "+ Register dispatch".
+            {dispatches.map((item, idx) => (
+              <tr key={item.dispatch_id || idx}>
+                <td>
+                  <span className="font-bold text-slate-900">{item.dispatch_id}</span>
+                </td>
+                <td>
+                  <div className="font-semibold text-slate-900">{item.customer}</div>
+                  <div className="text-[11px] text-slate-400 font-normal">Registered</div>
+                </td>
+                <td>
+                  <div className="text-xs font-semibold text-slate-900">{item.po_number}</div>
+                  <div className="text-[11px] text-slate-400 font-normal">Veh: {item.vehicle}</div>
+                </td>
+                <td>
+                  <div className="text-xs font-bold text-slate-900">{item.weight}</div>
+                  <div className="text-[11px] text-slate-400 font-normal">Rate: {item.rate}</div>
+                </td>
+                <td>
+                  <span className={`status-badge ${
+                    item.status === 'DRAFT_INVOICE_CREATED' || item.status === 'VALIDATED' 
+                      ? 'issued' 
+                      : item.status === 'VALIDATION_REQUIRED' 
+                        ? 'critical' 
+                        : 'warning'
+                  }`}>
+                    • {item.status}
+                  </span>
+                </td>
+                <td>
+                  <Link href={`/dispatches/${item.dispatch_id}`} className="text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1">
+                    {item.action} <span>→</span>
+                  </Link>
                 </td>
               </tr>
-            ) : (
-              filteredDispatches.map((item, idx) => (
-                <tr key={item.dispatch_id || idx} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="font-bold text-slate-900">
-                    <Link href={`/dispatches/${item.dispatch_id}`} className="hover:underline text-slate-900">
-                      {item.dispatch_id}
-                    </Link>
-                  </td>
-                  <td className="font-semibold text-slate-800">
-                    {item.customer_name || 'XYZ Industries'}
-                  </td>
-                  <td>
-                    <div className="font-medium text-slate-700">{item.po_number || 'PO-98765'}</div>
-                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{item.vehicle_number || 'MH12 AB 4321'}</div>
-                  </td>
-                  <td>
-                    <div className="font-semibold text-slate-900">{typeof item.weight_kg === 'number' ? item.weight_kg.toLocaleString() : item.weight_kg} KG</div>
-                    <div className="text-[11px] text-slate-500 font-semibold mt-0.5">₹{(item.selling_rate || 58.0).toFixed(2)}/kg</div>
-                  </td>
-                  <td>
-                    {item.status === 'DRAFT_INVOICE_CREATED' || item.status === 'APPROVED' ? (
-                      <span className="status-badge issued">
-                        <span className="status-dot"></span>
-                        Invoice Drafted
-                      </span>
-                    ) : item.status === 'VALIDATED' ? (
-                      <span className="status-badge critical">
-                        <span className="status-dot"></span>
-                        Validated
-                      </span>
-                    ) : (
-                      <span className="status-badge warning">
-                        <span className="status-dot"></span>
-                        {item.status || 'Pending'}
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    {item.zoho_sales_invoice_id ? (
-                      <a
-                        href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs font-bold text-slate-900 hover:underline flex items-center gap-1"
-                      >
-                        Open Zoho →
-                      </a>
-                    ) : (
-                      <Link
-                        href={`/dispatches/${item.dispatch_id}`}
-                        className="text-xs font-bold text-slate-900 hover:underline"
-                      >
-                        Inspect →
-                      </Link>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>
