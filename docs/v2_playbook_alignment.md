@@ -1,76 +1,133 @@
-# 🚀 Enlight Sales OS — VIBE CODING V2 PLAYBOOK ALIGNMENT & ARCHITECTURE AUDIT
+# 🚀 Enlight Sales OS — Complete VIBE CODING V2 Playbook Alignment & Technical Specification
 
-This document evaluates **Enlight Sales OS** against the **Vibe Coding Website + AI Integration Best Practices V2** playbook for production-style AI web applications.
-
----
-
-## 1. Executive Summary & Core Principle Compliance
-
-| Playbook Rule | Enlight Sales OS Implementation | Status |
-|---------------|----------------------------------|--------|
-| **Product Before Model** | Business logic (weighbridge matching, rate locking at ₹58.00/kg, dispatch validation) operates deterministically before AI is invoked. | ✅ COMPLIANT |
-| **Backend-Controlled AI** | Model provider calls (Gemini 2.5 Flash), Zoho Books OAuth tokens, and Twilio webhooks execute strictly inside backend API boundaries (`apps/api`). No provider keys exist on client. | ✅ COMPLIANT |
-| **Zero-Trust Model Boundary** | AI-extracted fields (weight, vehicle #, PO #) pass Pydantic schema validation & normalization (`ValidatorEngine`, `Normalizer`) before database persistence or Zoho Books draft creation. | ✅ COMPLIANT |
-| **Data Is Not Instruction** | User-submitted WhatsApp text, image captions, and OCR text are processed as raw data. System instructions and rate lock rules cannot be overridden by user input. | ✅ COMPLIANT |
-| **Deterministic Authorization** | Role-Based Access Control (`X-User-Role: Admin | Accountant | Dispatch User`) and Zoho `status: draft` rules are enforced by FastAPI middleware and adapters. | ✅ COMPLIANT |
-| **No Fake Success** | If Zoho API returns errors or non-draft status, the adapter throws `DraftStatusViolationException` and displays honest failure logs instead of silent fallbacks. | ✅ COMPLIANT |
+This document provides a comprehensive audit, alignment, and implementation specification of **Enlight Sales OS** against the **Vibe Coding Website + AI Integration Best Practices V2** playbook for production-style AI web applications.
 
 ---
 
-## 2. Architecture & Trust Boundary Map
+## 1. Executive Analysis & Architecture Overview
+
+Enlight Sales OS treats AI (Google Gemini 2.5 Flash Vision) as a probabilistic service capability behind a strict application-controlled API boundary (`apps/api`). Deterministic business rules—such as customer rate locking at **₹58.00/kg**, weighbridge tolerance verification (<= 1.0%), and mandatory **DRAFT** status enforcement in Zoho Books—remain outside AI prompts.
+
+### Key Architectural Layers:
+1. **Frontend Presentation**: Next.js 14 App Router (`apps/web`) rendering server-sanitized UI components with WCAG 2.2 accessibility.
+2. **Universal Serverless API Gateway**: Next.js proxy (`/api/v1/[...path]`) with 25-second timeout and role-based header injection (`X-User-Role`).
+3. **Application Core & Validation Engine**: FastAPI backend (`apps/api`) running `ValidatorEngine` for cross-document vehicle and weight matching.
+4. **AI Orchestration & Vision OCR**: Gemini 2.5 Flash service extracting structured JSON from multi-page PDFs, WhatsApp images, and weighbridge slips.
+5. **Integration Adapters & Safeguards**: `ZohoSalesInvoiceAdapter` enforcing numerical ID sanitization (`/^\d+$/`), global OAuth token caching (3,600s), and draft status checks.
+
+---
+
+## 2. Non-Negotiable Operating Principles Alignment
+
+| Principle | Playbook Requirement | Enlight Sales OS Implementation | Verification Status |
+|-----------|----------------------|----------------------------------|---------------------|
+| **Product Before Model** | Deterministic product workflow first. | Dispatch creation, rate calculation, and validation work deterministically without requiring active model calls. | ✅ VERIFIED |
+| **Backend-Controlled AI** | Secrets and model prompts stay server-side. | `GEMINI_API_KEY`, `ZOHO_CLIENT_SECRET`, and `TWILIO_AUTH_TOKEN` are backend-only. No keys exist in frontend JS. | ✅ VERIFIED |
+| **Zero-Trust Boundary** | Model outputs treated as untrusted data. | Extracted fields pass Pydantic schema validation (`DispatchValidationReport`) before persistence. | ✅ VERIFIED |
+| **Data Is Not Instruction** | User text/images cannot override policy. | Customer PO rate lock (₹58.00/kg) and Zoho DRAFT status cannot be modified or bypassed by text instructions in WhatsApp or OCR text. | ✅ VERIFIED |
+| **Evidence Over Confidence** | Source-linked evidence required. | Invoice line item descriptions detail Customer PO #, Vehicle #, LR #, and Agreed Rate source. | ✅ VERIFIED |
+| **No Fake Success** | Transparent failure states. | Zoho API errors raise `DraftStatusViolationException` or explicit error logs; no dummy invoice IDs are generated. | ✅ VERIFIED |
+
+---
+
+## 3. Threat Model & Trust Boundary Map
 
 ```
-UNTRUSTED USER INPUT (WhatsApp / Web intake / OCR document upload)
+UNTRUSTED BOUNDARY: User WhatsApp Text / Uploaded PDFs / Image Captions
         |
         v
-[FASTAPI VALIDATION & NORMALIZATION]
-  - Pydantic Schema Validation
-  - Vehicle & Weight Normalization
-  - Role-Based Access Control (RBAC)
+[FASTAPI INPUT VALIDATION & RBAC]
+  - Header Validation (`X-User-Role: Admin | Accountant | Dispatch User`)
+  - File Size & Type Sanitization (Max 10MB PDF/JPEG)
+  - Text Normalization via `NormalizerEngine`
         |
         v
-[APPLICATION BUSINESS LOGIC ENGINE]
-  - Customer PO Selling Rate Lock (₹58.00/kg)
-  - Cross-Document Vehicle Matching (PB vs LR vs Weighbridge)
-  - Weight Tolerance Check (<= 1.0%)
+[APPLICATION SERVICE ORCHESTRATOR]
+  - Hard-locked Customer PO Selling Rate (₹58.00 / kg)
+  - Weighbridge Tolerance Rule (abs(w_slip - w_wa) / w_wa <= 1.0%)
+  - Immutable Audit Trail Logging
         |
         v
-[AI ORCHESTRATOR & PROVIDER BOUNDARY]
-  - Google Gemini 2.5 Flash Vision OCR
-  - Versioned Extraction Prompts
-  - Global Token Caching (3600s cache for Zoho OAuth)
+[AI VISION & ZOHO ADAPTER BOUNDARY]
+  - Google Gemini 2.5 Flash Vision OCR (JSON Schema Enforcement)
+  - Global OAuth Token Caching (`GLOBAL_ACCESS_TOKEN` valid 3600s)
+  - Forced `status == "draft"` Check (`DraftStatusViolationException`)
         |
         v
-[ZOHO BOOKS DRAFT INVOICE ADAPTER]
-  - Forced DRAFT status check (`returned_status == 'draft'`)
-  - 19-Digit Numerical ID Sanitization
-  - Automatic Contact ID Resolution (`4102947000000042014`)
-        |
-        v
-[PERSISTENCE & ACCESSIBLE UI]
-  - Next.js Web Dashboard (`/dispatches`, `/invoices`, `/whatsapp`)
-  - Real-time Session Sync & Direct Link Routing
+PERSISTENT STORAGE & SANITIZED FRONTEND
+  - SQLite / PostgreSQL Async SQLAlchemy Models
+  - Regex-Sanitized Direct Links (`/^\d+$/` 19-Digit Zoho IDs)
 ```
 
 ---
 
-## 3. Threat Model & Security Controls
+## 4. Input & Output Contract Specifications
 
-1. **Prompt Injection Boundary**:
-   - Extracted document text and WhatsApp message bodies are passed strictly as JSON payload attributes.
-   - System prompts are isolated in backend services (`apps/api/app/services/classifier.py` and `apps/api/app/services/validator.py`).
+### 4.1 AI Analysis Input Contract
+```json
+{
+  "task": "DOCUMENT_EXTRACTION_AND_VALIDATION",
+  "dispatch_id": "DSP-98765",
+  "documents": [
+    { "type": "PURCHASE_ORDER", "s3_url": "https://s3.amazonaws.com/bucket/po.pdf" },
+    { "type": "WEIGHBRIDGE_SLIP", "s3_url": "https://s3.amazonaws.com/bucket/weight.jpg" }
+  ],
+  "constraints": {
+    "locked_selling_rate": 58.00,
+    "weight_tolerance_percent": 1.0,
+    "enforce_draft_status": true
+  }
+}
+```
 
-2. **Output Sanitization & Direct URL Links**:
-   - All Zoho Books invoice URLs rendered in the frontend are sanitized via regex (`/^\d+$/`) to ensure only real 19-digit numerical IDs are passed. Invalid strings default to the main Zoho draft list (`https://books.zoho.in/app/60082578964#/invoices`), preventing red error popups.
-
-3. **Rate Limits & Timeout Controls**:
-   - Next.js Gateway Proxy timeout set to **25 seconds** (`AbortSignal.timeout(25000)`) to allow full AI parsing & Zoho API calls without request truncation.
-   - Global token caching (`GLOBAL_ACCESS_TOKEN`) prevents hitting Zoho's OAuth endpoint continuously, eliminating `400 Access Denied` rate limits.
+### 4.2 Zoho Books Sales Invoice Payload Contract
+```json
+{
+  "customer_id": "4102947000000042014",
+  "customer_name": "Tata Steel Ltd",
+  "reference_number": "PO-TATA/1122 - 2026-08-19",
+  "status": "draft",
+  "line_items": [
+    {
+      "name": "TMT Rebars / Steel Material",
+      "description": "Customer PO: PO-TATA/1122 | Agreed Rate: ₹58.00/kg | Vehicle: KA01 XY 9999 | LR: LR-778899",
+      "rate": 58.00,
+      "quantity": 1000.0
+    }
+  ],
+  "notes": "Dispatch Details: Vehicle KA01 XY 9999 | Driver 9876543210 | LR LR-778899 | Vendor Tata Steel Ltd",
+  "terms": "Draft Sales Invoice generated automatically by Enlight Sales OS. Final verification and E-Way Bill by Accountant."
+}
+```
 
 ---
 
-## 4. Verification & Release Quality Gates
+## 5. Async Jobs, Idempotency & Rate Limit Resilience
 
-- **Automated E2E Suite**: 9/9 Playwright E2E tests passing (`npx playwright test`).
-- **Live Intake Verification**: Manual integration script (`scratch/test_manual_full_flow.py`) verified 50 dispatches & 82 Zoho draft invoices in Org `60082578964`.
-- **Production Deployment**: Live and ready at [**`https://web-chi-azure-76.vercel.app`**](https://web-chi-azure-76.vercel.app).
+1. **Idempotent Webhook Processing**:
+   - Incoming WhatsApp intake messages are deduplicated by `message_sid` or `po_number` + `timestamp` combination.
+   - Prevents duplicate draft invoice creation in Zoho Books when Twilio retries webhooks.
+
+2. **Global OAuth Token Caching**:
+   - `GLOBAL_ACCESS_TOKEN` is cached in memory for 3,600 seconds.
+   - 401/403 responses trigger automatic token invalidation and a single refresh attempt, avoiding continuous request loops (`400 Access Denied`).
+
+3. **Gateway Timeouts**:
+   - Next.js proxy timeout is set to **25,000 ms** (25s) to ensure long-running vision OCR or Zoho Books API calls complete cleanly.
+
+---
+
+## 6. Accessibility (WCAG 2.2) & UI Guidelines
+
+1. **Keyboard Navigable**: All navigation links, modal triggers, and Zoho invoice action buttons feature visible focus rings (`ring-2 ring-blue-500`).
+2. **Explicit Status Badges**: Draft status is demarcated with semantic text (`🔒 DRAFT (Forced Protection)`) and high-contrast badges (Slate/Blue/Green HSL color palette).
+3. **Screen Reader Friendly**: Form inputs contain associated `<label>` tags and ARIA descriptors (`aria-live="polite"` for asynchronous WhatsApp simulator responses).
+
+---
+
+## 7. Release Quality Gates & Verification Evidence
+
+- **Automated E2E Test Suite**: `npx playwright test` -> **9/9 Passed** (Login, Dashboard, Dispatches, Approvals, Invoices, Exceptions, WhatsApp Command Center).
+- **Live Integration Verification**: `scratch/test_manual_full_flow.py` verified **50 dispatches** and **82 live Zoho draft invoices** in Org `60082578964`.
+- **Production Alias**: [**`https://web-chi-azure-76.vercel.app`**](https://web-chi-azure-76.vercel.app) (**`READY`**).
+- **GitHub Commit**: [`93d5616`](https://github.com/varunbadwaik/Enlight-Sales-OS/commit/93d5616) (`docs(playbook): add V2 Playbook alignment audit and enhance Zoho API resilience`).
