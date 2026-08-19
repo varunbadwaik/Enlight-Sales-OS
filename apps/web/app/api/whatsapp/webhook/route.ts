@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(payload).toString(),
-        signal: AbortSignal.timeout(6000), // 6 second timeout
+        signal: AbortSignal.timeout(25000), // 25 second timeout for Zoho Books API calls
       });
 
       if (apiRes.ok) {

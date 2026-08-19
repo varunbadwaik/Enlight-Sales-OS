@@ -40,7 +40,7 @@ async function handleRequest(req: NextRequest, params: { path: string[] }) {
       method: req.method,
       headers,
       body: bodyText,
-      signal: AbortSignal.timeout(6000) // 6 second timeout for Zoho Books API calls
+      signal: AbortSignal.timeout(25000) // 25 second timeout for Zoho Books API & Gemini Vision calls
     });
 
     if (apiRes.ok) {
