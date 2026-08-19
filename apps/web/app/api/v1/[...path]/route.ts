@@ -44,8 +44,17 @@ async function handleRequest(req: NextRequest, params: { path: string[] }) {
     });
 
     if (apiRes.ok) {
-      const data = await apiRes.json();
-      return NextResponse.json(data, { status: apiRes.status });
+      const contentType = apiRes.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await apiRes.json();
+        return NextResponse.json(data, { status: apiRes.status });
+      } else {
+        const textData = await apiRes.text();
+        return new NextResponse(textData, {
+          status: apiRes.status,
+          headers: { 'content-type': contentType || 'text/xml' }
+        });
+      }
     }
   } catch (err) {
     console.warn(`[Gateway Proxy Error] Path: /api/v1/${path} error:`, err);

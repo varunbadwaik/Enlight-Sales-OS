@@ -80,7 +80,7 @@ Dispatch      : 12-08-2026`
       const text = await res.text();
       const cleanText = text.replace(/<[^>]+>/g, '').trim();
       setSimResponse(cleanText);
-      fetchSessions();
+      await fetchSessions();
     } catch (err: any) {
       setSimResponse(`Error: ${err.message}`);
     } finally {

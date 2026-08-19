@@ -156,23 +156,41 @@ async def whatsapp_agent_webhook(
         except Exception as e:
             logger.warning(f"Gemini AI text parsing warning: {e}")
 
-        # Extract dynamic fields from Gemini AI JSON (with regex fallback)
-        cust_match = (re.search(r'Sale To:\s*([^\n\r]+)', text_content, re.IGNORECASE) or re.search(r'Customer:\s*([^\n\r]+)', text_content, re.IGNORECASE))
-        veh_match = (re.search(r'Vehicle\s*(?:No)?:\s*([A-Za-z0-9\s]+?)(?=\s+Driver|\s+Transport|\n|\r|$)', text_content, re.IGNORECASE) or re.search(r'Vehicle:\s*([A-Za-z0-9\s]+)', text_content, re.IGNORECASE))
-        wt_match = re.search(r'Weight(?:\s*kg)?:\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE)
-        grade_match = re.search(r'Grade:\s*([^\n\r]+)', text_content, re.IGNORECASE)
-        size_match = re.search(r'Size:\s*([^\n\r]+)', text_content, re.IGNORECASE)
-        lr_match = re.search(r'Transport:\s*([^\n\r]+)', text_content, re.IGNORECASE)
+        # Extract dynamic fields from Gemini AI JSON (with flexible regex fallback)
+        cust_match = (
+            re.search(r'Sale\s*To\s*[:-]\s*([^\n\r]+)', text_content, re.IGNORECASE) or
+            re.search(r'Customer\s*[:-]\s*([^\n\r]+)', text_content, re.IGNORECASE) or
+            re.search(r'Client\s*[:-]\s*([^\n\r]+)', text_content, re.IGNORECASE)
+        )
+        veh_match = (
+            re.search(r'Vehicle\s*(?:No)?\s*[:-]\s*([A-Za-z0-9\s]+?)(?=\s+Driver|\s+Transport|\n|\r|$)', text_content, re.IGNORECASE) or
+            re.search(r'Vehicle\s*[:-]?\s*([A-Za-z0-9\s]+)', text_content, re.IGNORECASE)
+        )
+        wt_match = (
+            re.search(r'Weight\s*(?:\(kg\)|kg)?\s*[:-]?\s*(\d+(?:\.\d+)?)', text_content, re.IGNORECASE) or
+            re.search(r'(\d+(?:\.\d+)?)\s*(?:kg|ton|mt)', text_content, re.IGNORECASE)
+        )
+        grade_match = re.search(r'Grade\s*[:-]?\s*([^\n\r]+)', text_content, re.IGNORECASE)
+        size_match = re.search(r'Size\s*[:-]?\s*([^\n\r]+)', text_content, re.IGNORECASE)
+        lr_match = (
+            re.search(r'Transport\s*[:-]?\s*([^\n\r]+)', text_content, re.IGNORECASE) or
+            re.search(r'Delivery\s*(?:on|as per)?\s*[:-]?\s*([^\n\r]+)', text_content, re.IGNORECASE)
+        )
+        po_inline_match = (
+            re.search(r'PO[-#:\s]*([A-Z0-9/\-_]+)', text_content, re.IGNORECASE) or
+            re.search(r'Delivery\s*as\s*per\s*[:-]?\s*([A-Z0-9/\-_]+)', text_content, re.IGNORECASE)
+        )
 
-        parsed_po = po_number_found or session.po_number or "PO-98765"
+        unique_suffix = datetime.now().strftime("%Y%m%d%H%M%S")
+        parsed_po = po_number_found or (po_inline_match.group(1).strip() if po_inline_match else None) or f"PO-WA-{unique_suffix}"
         parsed_customer = gemini_parsed.get("sale_to") or (cust_match.group(1).strip() if cust_match else "Tata Steel Ltd")
         parsed_vehicle = gemini_parsed.get("vehicle_number") or (veh_match.group(1).strip() if veh_match else "KA01 XY 9999")
-        parsed_weight = Decimal(str(gemini_parsed.get("weight_kg"))) if gemini_parsed.get("weight_kg") else (Decimal(wt_match.group(1).strip()) if wt_match else Decimal("1"))
+        parsed_weight = Decimal(str(gemini_parsed.get("weight_kg"))) if gemini_parsed.get("weight_kg") else (Decimal(wt_match.group(1).strip()) if wt_match else Decimal("1000"))
 
         m_grade = gemini_parsed.get("grade") or (grade_match.group(1).strip() if grade_match else "")
         m_size = gemini_parsed.get("size") or (size_match.group(1).strip() if size_match else "")
-        parsed_material = f"{m_grade} - {m_size}" if m_grade and m_size else (m_grade or m_size or "Food Grade - 55kg Bags")
-        parsed_lr = gemini_parsed.get("transporter") or (lr_match.group(1).strip() if lr_match else "VRL Logistics")
+        parsed_material = f"{m_grade} - {m_size}" if m_grade and m_size else (m_grade or m_size or "Steel Rebars / Industrial Material")
+        parsed_lr = gemini_parsed.get("transporter") or (lr_match.group(1).strip() if lr_match else "Safexpress Logistics")
 
         # Create Dispatch record with source="WHATSAPP"
         dispatch = await crud.create_dispatch(
