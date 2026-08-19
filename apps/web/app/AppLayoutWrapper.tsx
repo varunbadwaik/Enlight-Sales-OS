@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { LogOut, Search, ChevronRight, FileText, CheckSquare, AlertTriangle, MessageSquare, Activity, Plus } from 'lucide-react';
+import { LogOut, Search, ChevronRight, FileText, CheckSquare, AlertTriangle, MessageSquare, Activity, Plus, Menu, X } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 interface UserInfo {
@@ -17,6 +17,7 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
   const pathname = usePathname();
   const router = useRouter();
   const isLoginPage = pathname === '/login';
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<UserInfo | null>({
     id: 'default-user',
     email: 'admin@enlightsales.com',
@@ -25,6 +26,11 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
   });
   const [authChecked, setAuthChecked] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Close mobile nav on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     async function checkAuthStatus() {
@@ -130,16 +136,30 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
 
   return (
     <div className="app-container">
+      {/* Mobile Backdrop Overlay */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 lg:hidden transition-opacity"
+        />
+      )}
+
       {/* Sidebar Navigation matching Pulse Clinic Reference */}
-      <aside className="sidebar flex flex-col justify-between">
+      <aside className={`sidebar flex flex-col justify-between ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div>
           {/* Brand Logo & Tagline */}
-          <div className="pb-3 border-b border-slate-200/80 mb-2">
+          <div className="pb-3 border-b border-slate-200/80 mb-2 flex items-center justify-between">
             <div className="brand-logo">
               <div className="brand-icon">⚡</div>
               <span>Enlight Sales OS</span>
               <span className="brand-badge">OS 1.0</span>
             </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="lg:hidden text-slate-400 hover:text-slate-700 p-1"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Grouped Nav Section 1: OVERVIEW */}
@@ -212,26 +232,33 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
       <div className="main-wrapper">
         {/* Top Header Bar matching Reference UI */}
         <header className="top-header-bar">
-          {/* Left Breadcrumbs */}
+          {/* Left Breadcrumbs + Mobile Menu Toggle */}
           <div className="flex items-center gap-2 font-medium text-xs">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-1.5 rounded-lg text-slate-700 hover:bg-slate-200 transition-colors"
+              title="Open Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <span className="font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-              <span>⚡</span> ENLIGHT SALES OS
+              <span>⚡</span> <span className="hidden sm:inline">ENLIGHT SALES OS</span>
             </span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-600 font-semibold">{getBreadcrumbTitle()}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 hidden sm:inline" />
+            <span className="text-slate-600 font-semibold truncate">{getBreadcrumbTitle()}</span>
           </div>
 
           {/* Right Global Controls */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Search Input Bar */}
-            <div className="relative flex items-center">
+            <div className="relative hidden sm:flex items-center">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Go to..."
-                className="bg-slate-100 border border-slate-200/90 rounded-lg pl-8 pr-12 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 transition-all w-48"
+                className="bg-slate-100 border border-slate-200/90 rounded-lg pl-8 pr-12 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 transition-all w-36 sm:w-48"
               />
               <span className="absolute right-2 text-[10px] font-bold bg-white text-slate-500 border border-slate-200 rounded px-1 py-0.5">
                 ⌘K
@@ -241,10 +268,11 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
             {/* Quick Action Button */}
             <button
               onClick={() => router.push('/dispatches')}
-              className="btn-dark-pill"
+              className="btn-dark-pill text-xs"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Register Dispatch</span>
+              <span className="hidden xs:inline">Register Dispatch</span>
+              <span className="xs:hidden">Register</span>
             </button>
           </div>
         </header>

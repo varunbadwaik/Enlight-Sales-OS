@@ -88,7 +88,7 @@ export default function InvoicesPage() {
       </div>
 
       {/* Table Container */}
-      <div className="card-clean p-0 overflow-hidden">
+      <div className="card-clean p-0 overflow-x-auto">
         <table className="table-clean">
           <thead>
             <tr>
