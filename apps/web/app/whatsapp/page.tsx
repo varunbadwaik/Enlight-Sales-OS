@@ -3,17 +3,19 @@
 import { useState, useEffect } from 'react';
 
 interface WhatsAppSessionItem {
-  id: string;
+  id?: string;
+  session_id?: string;
   whatsapp_number: string;
-  session_status: string;
-  po_number: string | null;
-  dispatch_id: string | null;
-  invoice_id: string | null;
-  doc_purchase_order: boolean;
-  doc_purchase_bill: boolean;
-  doc_lorry_receipt: boolean;
-  doc_weight_slip: boolean;
-  created_at: string;
+  session_status?: string;
+  status?: string;
+  po_number?: string | null;
+  dispatch_id?: string | null;
+  invoice_id?: string | null;
+  doc_purchase_order?: boolean;
+  doc_purchase_bill?: boolean;
+  doc_lorry_receipt?: boolean;
+  doc_weight_slip?: boolean;
+  created_at?: string;
 }
 
 export default function WhatsAppSessionsPage() {
@@ -41,7 +43,8 @@ Dispatch      : 12-08-2026`
       const res = await fetch('/api/v1/whatsapp/sessions', { headers });
       if (res.ok) {
         const data = await res.json();
-        setSessions(data);
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.sessions) ? data.sessions : []);
+        setSessions(items);
       } else {
         setSessions([
           { id: 'wa-sess-001', whatsapp_number: '+91 75883 53703', session_status: 'COMPLETED', po_number: 'PO-98765', dispatch_id: 'DSP-98765', invoice_id: '4102947000000042033', doc_purchase_order: true, doc_purchase_bill: true, doc_lorry_receipt: true, doc_weight_slip: true, created_at: new Date().toISOString() },
@@ -50,6 +53,9 @@ Dispatch      : 12-08-2026`
       }
     } catch (err) {
       console.error('Error fetching sessions:', err);
+      setSessions([
+        { id: 'wa-sess-001', whatsapp_number: '+91 75883 53703', session_status: 'COMPLETED', po_number: 'PO-98765', dispatch_id: 'DSP-98765', invoice_id: '4102947000000042033', doc_purchase_order: true, doc_purchase_bill: true, doc_lorry_receipt: true, doc_weight_slip: true, created_at: new Date().toISOString() }
+      ]);
     }
   };
 
@@ -82,6 +88,8 @@ Dispatch      : 12-08-2026`
     }
   };
 
+  const sessionList = Array.isArray(sessions) ? sessions : [];
+
   return (
     <div>
       {/* Page Header */}
@@ -99,22 +107,22 @@ Dispatch      : 12-08-2026`
         </button>
       </div>
 
-      {/* Grid Layout: Live Simulator + Active Sessions */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Interactive Simulator */}
+      {/* Grid Container */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Simulator Card */}
         <div className="card-clean">
           <div className="text-sm font-extrabold text-slate-900 mb-2 flex items-center gap-2">
-            <span>💬 Live Message Simulator</span>
+            <span>💬 Live WhatsApp Agent Message Simulator</span>
           </div>
-          <p className="text-xs text-slate-500 mb-3 font-medium">
-            Test Gemini 2.5 Flash parsing & Zoho Books live draft invoice creation:
+          <p className="text-xs text-slate-500 mb-4 font-medium">
+            Paste a lorry receipt text or dispatch detail below to test the automated flow:
           </p>
 
           <textarea
             value={testMessage}
             onChange={(e) => setTestMessage(e.target.value)}
             rows={8}
-            className="w-full p-3 rounded-lg border border-slate-200 font-mono text-xs bg-slate-50 text-slate-900 mb-3 focus:outline-none focus:bg-white focus:border-slate-400"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-900 focus:outline-none focus:bg-white focus:border-slate-400 mb-4"
           />
 
           <button
@@ -142,8 +150,8 @@ Dispatch      : 12-08-2026`
           </p>
 
           <div className="flex flex-col gap-3">
-            {sessions.map((sess) => (
-              <div key={sess.id} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center justify-between">
+            {sessionList.map((sess, idx) => (
+              <div key={sess.id || sess.session_id || idx} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center justify-between">
                 <div>
                   <div className="font-bold text-slate-900 text-sm">
                     {sess.whatsapp_number}
@@ -155,7 +163,7 @@ Dispatch      : 12-08-2026`
 
                 <div className="flex flex-col items-end gap-1.5">
                   <span className="status-badge issued">
-                    • {sess.session_status}
+                    • {sess.session_status || sess.status || 'COMPLETED'}
                   </span>
                   {sess.invoice_id && (
                     <a
