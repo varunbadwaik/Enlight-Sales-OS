@@ -20,7 +20,8 @@ export default function OperationalDashboard() {
         const res = await fetch('/api/v1/dispatches', { headers });
         if (res.ok) {
           const data = await res.json();
-          setDispatches(data.dispatches || []);
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.dispatches) ? data.dispatches : []);
+          setDispatches(items);
         } else {
           setDispatches([
             { dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', vehicle_number: 'MH12 AB 4321', weight_kg: 12500, selling_rate: 58.0, status: 'DRAFT_INVOICE_CREATED', source: 'WHATSAPP', zoho_sales_invoice_id: '4102947000000063007', created_at: '1h ago' },
@@ -42,6 +43,8 @@ export default function OperationalDashboard() {
     fetchDispatches();
   }, []);
 
+  const dispatchList = Array.isArray(dispatches) ? dispatches : [];
+
   return (
     <div>
       {/* Page Title Header matching Reference Image */}
@@ -50,7 +53,7 @@ export default function OperationalDashboard() {
           <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CARE</div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dispatches</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {dispatches.length} dispatches registered — every record is tracked on the audit log.
+            {dispatchList.length} dispatches registered — every record is tracked on the audit log.
           </p>
         </div>
 
@@ -105,7 +108,7 @@ export default function OperationalDashboard() {
           </button>
         </div>
         <div className="text-xs font-semibold text-slate-500">
-          Showing 1 to {dispatches.length} of {dispatches.length}
+          Showing 1 to {dispatchList.length} of {dispatchList.length}
         </div>
       </div>
 
@@ -123,7 +126,7 @@ export default function OperationalDashboard() {
             </tr>
           </thead>
           <tbody>
-            {dispatches.map((item, idx) => (
+            {dispatchList.map((item, idx) => (
               <tr key={idx}>
                 <td className="font-bold text-slate-900">
                   {item.dispatch_id || item.id || `DSP-00${idx + 1}`}
