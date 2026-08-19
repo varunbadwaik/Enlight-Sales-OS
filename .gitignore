@@ -42,6 +42,7 @@ apps/api/uploads/whatsapp/*
 .DS_Store
 Thumbs.db
 .vscode/
+!.vscode/settings.json
 .idea/
 *.swp
 *.tmp
