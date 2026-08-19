@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
  * 
  * Handles incoming Twilio WhatsApp webhooks, n8n workflows, and UI sync.
  */
+
+const DEFAULT_BACKEND_URL = 'https://chris-valuable-arbitration-python.trycloudflare.com';
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get('content-type') || '';
@@ -34,8 +37,8 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Webhook Intake] From: ${from} | Body: ${bodyText} | Media: ${numMedia > 0 ? mediaUrl : 'None'}`);
 
-    // Try forwarding to local/cloud backend API if available
-    const backendUrl = process.env.FASTAPI_BACKEND_URL || 'http://localhost:8000';
+    // Forward to active Cloudflare Tunnel / FastAPI backend
+    const backendUrl = process.env.FASTAPI_BACKEND_URL || DEFAULT_BACKEND_URL;
     let backendSuccess = false;
 
     try {
@@ -43,14 +46,14 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(payload).toString(),
-        signal: AbortSignal.timeout(3000), // 3 second timeout
+        signal: AbortSignal.timeout(6000), // 6 second timeout
       });
 
       if (apiRes.ok) {
         backendSuccess = true;
       }
     } catch (err) {
-      console.warn('[Webhook Proxy] Primary backend timeout/unreachable, processing locally.');
+      console.warn('[Webhook Proxy] Primary backend timeout/unreachable, processing locally.', err);
     }
 
     // Auto-respond with TwiML XML for Twilio WhatsApp
@@ -76,6 +79,7 @@ export async function GET() {
     status: 'online',
     service: 'Enlight Sales OS — Webhook Gateway',
     webhook_url: 'https://web-chi-azure-76.vercel.app/api/whatsapp/webhook',
+    tunnel_backend_url: DEFAULT_BACKEND_URL,
     supported_providers: ['Twilio WhatsApp', 'n8n Workflows', 'Custom JSON/Form Webhooks'],
     updated_at: new Date().toISOString()
   });
