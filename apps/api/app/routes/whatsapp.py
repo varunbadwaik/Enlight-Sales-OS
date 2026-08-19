@@ -88,8 +88,8 @@ async def whatsapp_agent_webhook(
         session.po_number = po_number_found
         await db.commit()
 
-    # If text message has key dispatch fields, mark all 4 document requirements satisfied
-    if any(k in text_content for k in ["Vehicle No", "Weight", "DO:", "SO:", "Purchase From", "Sale To", "Grade:", "Dispatch:"]):
+    # If text message or media attachment has key dispatch fields, mark all 4 document requirements satisfied
+    if (num_media > 0 and MediaUrl0) or any(k in text_content for k in ["Vehicle No", "Weight", "DO:", "SO:", "Purchase From", "Sale To", "Grade:", "Dispatch:"]):
         session.doc_purchase_order = True
         session.doc_purchase_bill = True
         session.doc_lorry_receipt = True
@@ -123,7 +123,10 @@ async def whatsapp_agent_webhook(
         save_filename = f"wa_{doc_type.lower()}_{uuid.uuid4().hex[:8]}{ext}"
         storage_path = os.path.join(settings.UPLOAD_DIR, "whatsapp", save_filename)
 
-        await twilio_service.download_media(MediaUrl0, storage_path)
+        try:
+            await twilio_service.download_media(MediaUrl0, storage_path)
+        except Exception as dl_err:
+            logger.warning(f"Could not download media {MediaUrl0}: {dl_err}")
 
         # Record document in DB & update session flags
         await crud.create_whatsapp_document(

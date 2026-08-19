@@ -64,7 +64,7 @@ class TwilioService:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
             async with httpx.AsyncClient(follow_redirects=True) as client:
-                res = await client.get(media_url, auth=auth, timeout=30.0)
+                res = await client.get(media_url, auth=auth, timeout=8.0)
                 if res.status_code == 200:
                     with open(save_path, "wb") as f:
                         f.write(res.content)
