@@ -54,7 +54,41 @@ class ZohoSalesInvoiceAdapter:
         if so_number:
             rich_description += f" | SO: {so_number}"
 
+        # Automatic customer_id resolution & dynamic customer contact creation
+        if not customer_id:
+            try:
+                contacts_res = await zoho_client.get("contacts")
+                contacts = contacts_res.get("contacts", [])
+                # 1. Search for matching customer contact type
+                for c in contacts:
+                    if c.get("contact_type") == "customer":
+                        c_name = c.get("contact_name", "")
+                        if customer_name.lower() in c_name.lower() or c_name.lower() in customer_name.lower():
+                            customer_id = str(c.get("contact_id"))
+                            break
+                # 2. If no matching customer contact exists, create customer dynamically in Zoho Books
+                if not customer_id:
+                    try:
+                        create_c_res = await zoho_client.post("contacts", json_data={
+                            "contact_name": customer_name,
+                            "contact_type": "customer"
+                        })
+                        new_contact = create_c_res.get("contact", {})
+                        if new_contact.get("contact_id"):
+                            customer_id = str(new_contact.get("contact_id"))
+                    except Exception as cex:
+                        logger.warning(f"Could not create new Zoho customer contact: {cex}")
+
+                # 3. Fallback to first available customer contact if creation blocked
+                if not customer_id:
+                    customer_contacts = [c for c in contacts if c.get("contact_type") == "customer"]
+                    if customer_contacts:
+                        customer_id = str(customer_contacts[0].get("contact_id"))
+            except Exception as e:
+                logger.warning(f"Failed to resolve Zoho customer ID: {e}")
+
         payload: Dict[str, Any] = {
+            "customer_id": customer_id or "4102947000000042007",
             "customer_name": customer_name,
             "reference_number": ref_text,
             "status": "draft",  # FORCE DRAFT STATUS
