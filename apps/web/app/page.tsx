@@ -1,79 +1,85 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 export default function OperationalDashboard() {
   const [dispatches, setDispatches] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [loading, setLoading] = useState(false);
+
+  const fetchDispatches = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-User-Role': 'Admin'
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('http://localhost:8000/api/v1/dispatches', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.dispatches && data.dispatches.length > 0) {
+          setDispatches(data.dispatches);
+        }
+      }
+    } catch (err) {
+      // Keep existing dispatches if offline
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchDispatches = async () => {
-      try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          'X-User-Role': 'Admin'
-        };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch('http://localhost:8000/api/v1/dispatches', { headers });
-        if (res.ok) {
-          const data = await res.json();
-          setDispatches(data.dispatches || []);
-        } else {
-          setDispatches([
-            { dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', vehicle_number: 'MH12 AB 4321', weight_kg: 12500, selling_rate: 58.0, status: 'DRAFT_INVOICE_CREATED', source: 'WHATSAPP', zoho_sales_invoice_id: '4102947000000063007', created_at: '1h ago' },
-            { dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-66666', vehicle_number: 'KA01 XY 9999', weight_kg: 10, selling_rate: 58.0, status: 'DRAFT_INVOICE_CREATED', source: 'WHATSAPP', zoho_sales_invoice_id: '4102947000000055007', created_at: '3h ago' },
-            { dispatch_id: 'DSP-001', customer_name: 'XYZ Industries', po_number: 'PO-12345', vehicle_number: 'MH12 AB 4321', weight_kg: 12500, selling_rate: 58.0, status: 'VALIDATED', source: 'WEB', zoho_sales_invoice_id: null, created_at: 'Yesterday' },
-            { dispatch_id: 'DSP-002', customer_name: 'Supertech Construction', po_number: 'PO-99999', vehicle_number: 'KA01 XY 9999', weight_kg: 25000, selling_rate: 58.0, status: 'APPROVED', source: 'WHATSAPP', zoho_sales_invoice_id: '4102947000000054001', created_at: '2 days ago' }
-          ]);
-        }
-      } catch (err) {
-        setDispatches([
-          { dispatch_id: 'DSP-98765', customer_name: 'abc Industries', po_number: 'PO-98765', vehicle_number: 'MH12 AB 4321', weight_kg: 12500, selling_rate: 58.0, status: 'DRAFT_INVOICE_CREATED', source: 'WHATSAPP', zoho_sales_invoice_id: '4102947000000063007', created_at: '1h ago' },
-          { dispatch_id: 'DSP-66666', customer_name: 'Tata Steel Ltd', po_number: 'PO-66666', vehicle_number: 'KA01 XY 9999', weight_kg: 10, selling_rate: 58.0, status: 'DRAFT_INVOICE_CREATED', source: 'WHATSAPP', zoho_sales_invoice_id: '4102947000000055007', created_at: '3h ago' },
-          { dispatch_id: 'DSP-001', customer_name: 'XYZ Industries', po_number: 'PO-12345', vehicle_number: 'MH12 AB 4321', weight_kg: 12500, selling_rate: 58.0, status: 'VALIDATED', source: 'WEB', zoho_sales_invoice_id: null, created_at: 'Yesterday' },
-          { dispatch_id: 'DSP-002', customer_name: 'Supertech Construction', po_number: 'PO-99999', vehicle_number: 'KA01 XY 9999', weight_kg: 25000, selling_rate: 58.0, status: 'APPROVED', source: 'WHATSAPP', zoho_sales_invoice_id: '4102947000000054001', created_at: '2 days ago' }
-        ]);
-      }
-    };
-
     fetchDispatches();
-  }, []);
+    const interval = setInterval(fetchDispatches, 3000);
+    return () => clearInterval(interval);
+  }, [fetchDispatches]);
+
+  const handleRegisterDispatch = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/dispatches/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          po_number: 'PO-98765',
+          whatsapp_message: 'Purchase From: Reliance Industries Ltd, Sale To: abc Industries, Weight: 12500 KG'
+        })
+      });
+      if (res.ok) {
+        await fetchDispatches();
+      }
+    } catch (err) {
+      console.error('Error registering dispatch:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDispatches = dispatches.filter((item) => {
+    if (activeFilter === 'Draft Created') return item.status === 'DRAFT_INVOICE_CREATED' || item.status === 'APPROVED';
+    if (activeFilter === 'This Month') return true;
+    return true;
+  });
 
   return (
     <div>
       {/* Page Title Header matching Reference Image */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CARE</div>
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">OVERVIEW</div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dispatches</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {dispatches.length} dispatches registered — every record is tracked on the audit log.
+            {dispatches.length} dispatches registered — live sync every 3 seconds across WhatsApp & Zoho Books.
           </p>
         </div>
 
         <button
           className="btn-dark-pill"
-          onClick={async () => {
-            try {
-              const res = await fetch('http://localhost:8000/api/v1/dispatches/intake', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  po_number: 'PO-98765',
-                  whatsapp_message: 'Purchase From: Reliance Industries Ltd, Sale To: abc Industries, Weight: 12500 KG'
-                })
-              });
-              const data = await res.json();
-              alert(`Created New Dispatch Intake: ${data.dispatch_id || 'DSP-98765'} in PostgreSQL!`);
-            } catch (err) {
-              alert('Created New Dispatch Intake: DSP-98765!');
-            }
-          }}
+          onClick={handleRegisterDispatch}
+          disabled={loading}
         >
-          <span>Register dispatch</span>
+          <span>{loading ? 'Creating...' : '+ Register dispatch'}</span>
         </button>
       </div>
 
@@ -89,7 +95,7 @@ export default function OperationalDashboard() {
             onClick={() => setActiveFilter('All')}
             className={`filter-pill ${activeFilter === 'All' ? 'active' : ''}`}
           >
-            All
+            All ({dispatches.length})
           </button>
           <button
             onClick={() => setActiveFilter('This Month')}
@@ -104,12 +110,13 @@ export default function OperationalDashboard() {
             Draft Created
           </button>
         </div>
+
         <div className="text-xs font-semibold text-slate-500">
-          Showing 1 to {dispatches.length} of {dispatches.length}
+          Showing 1 to {filteredDispatches.length} of {filteredDispatches.length}
         </div>
       </div>
 
-      {/* Clean White Table Container */}
+      {/* Clean Table Container */}
       <div className="card-clean p-0 overflow-hidden">
         <table className="table-clean">
           <thead>
@@ -117,58 +124,77 @@ export default function OperationalDashboard() {
               <th>Dispatch ID</th>
               <th>Customer Name</th>
               <th>PO Number & Details</th>
-              <th>Duration / Intake</th>
-              <th>Status</th>
+              <th>Duration / Weight</th>
+              <th>Intake Status</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {dispatches.map((item, idx) => (
-              <tr key={idx}>
-                <td className="font-bold text-slate-900">
-                  {item.dispatch_id || item.id || `DSP-00${idx + 1}`}
-                </td>
-                <td className="font-semibold text-slate-900">
-                  {item.customer_name || 'abc Industries'}
-                </td>
-                <td>
-                  <span className="font-medium text-slate-700">
-                    {item.po_number || 'PO-98765'} — {item.vehicle_number || 'MH12 AB 4321'} ({item.weight_kg ? Number(item.weight_kg).toLocaleString() : '12,500'} kg @ ₹{(item.selling_rate || 58.0).toFixed(2)}/kg)
-                  </span>
-                </td>
-                <td className="text-slate-500 font-medium">
-                  {item.created_at || '7-day course · 1h ago'}
-                </td>
-                <td>
-                  <span className={`status-badge ${
-                    item.status === 'DRAFT_INVOICE_CREATED' ? 'issued' :
-                    item.status === 'APPROVED' ? 'passed' :
-                    item.status === 'VALIDATED' ? 'part-dispensed' : 'pending'
-                  }`}>
-                    • {item.status === 'DRAFT_INVOICE_CREATED' ? 'Issued' : item.status || 'Pending'}
-                  </span>
-                </td>
-                <td>
-                  {item.zoho_sales_invoice_id ? (
-                    <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
-                    >
-                      View Draft
-                    </a>
-                  ) : (
-                    <Link
-                      href={`/dispatches/${item.dispatch_id || item.id || 'DSP-001'}`}
-                      className="text-xs font-bold text-slate-600 hover:text-slate-900"
-                    >
-                      Inspect →
-                    </Link>
-                  )}
+            {filteredDispatches.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-slate-400 text-xs font-semibold">
+                  No dispatches found. Send a message on WhatsApp or click "+ Register dispatch".
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredDispatches.map((item, idx) => (
+                <tr key={item.dispatch_id || idx} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="font-bold text-slate-900">
+                    <Link href={`/dispatches/${item.dispatch_id}`} className="hover:underline text-slate-900">
+                      {item.dispatch_id}
+                    </Link>
+                  </td>
+                  <td className="font-semibold text-slate-800">
+                    {item.customer_name || 'XYZ Industries'}
+                  </td>
+                  <td>
+                    <div className="font-medium text-slate-700">{item.po_number || 'PO-98765'}</div>
+                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{item.vehicle_number || 'MH12 AB 4321'}</div>
+                  </td>
+                  <td>
+                    <div className="font-semibold text-slate-900">{typeof item.weight_kg === 'number' ? item.weight_kg.toLocaleString() : item.weight_kg} KG</div>
+                    <div className="text-[11px] text-slate-500 font-semibold mt-0.5">₹{(item.selling_rate || 58.0).toFixed(2)}/kg</div>
+                  </td>
+                  <td>
+                    {item.status === 'DRAFT_INVOICE_CREATED' || item.status === 'APPROVED' ? (
+                      <span className="status-badge issued">
+                        <span className="status-dot"></span>
+                        Invoice Drafted
+                      </span>
+                    ) : item.status === 'VALIDATED' ? (
+                      <span className="status-badge critical">
+                        <span className="status-dot"></span>
+                        Validated
+                      </span>
+                    ) : (
+                      <span className="status-badge warning">
+                        <span className="status-dot"></span>
+                        {item.status || 'Pending'}
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {item.zoho_sales_invoice_id ? (
+                      <a
+                        href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-bold text-slate-900 hover:underline flex items-center gap-1"
+                      >
+                        Open Zoho →
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/dispatches/${item.dispatch_id}`}
+                        className="text-xs font-bold text-slate-900 hover:underline"
+                      >
+                        Inspect →
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
