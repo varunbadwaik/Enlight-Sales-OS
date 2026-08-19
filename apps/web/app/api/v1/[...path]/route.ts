@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Routes live requests to active Cloudflare Tunnel / FastAPI backend with live Zoho Books org 60082578964!
  */
 
-const DEFAULT_BACKEND_URL = 'https://chris-valuable-arbitration-python.trycloudflare.com';
+const DEFAULT_BACKEND_URL = 'https://similar-bow-lbs-franklin.trycloudflare.com';
 
 // Memory state fallback for production serverless execution
 let dispatchesStore = [
