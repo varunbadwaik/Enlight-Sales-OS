@@ -11,11 +11,9 @@ export default function DispatchesPage() {
     { dispatch_id: 'DSP-004', customer: 'Apex Metals', po_number: 'PO-11223', vehicle: 'MH14XY9999', weight: '10,000 KG', rate: '₹55.00/kg', status: 'PENDING_APPROVAL', action: 'Approve' },
   ]);
   const [filter, setFilter] = useState('All');
-  const [loading, setLoading] = useState(false);
 
-  const fetchDispatches = () => {
-    setLoading(true);
-    fetch('http://localhost:8000/api/v1/dispatches')
+  useEffect(() => {
+    fetch('/api/v1/dispatches')
       .then((res) => res.json())
       .then((data) => {
         if (data.dispatches && data.dispatches.length > 0) {
@@ -36,14 +34,7 @@ export default function DispatchesPage() {
           });
         }
       })
-      .catch((err) => console.log('API Dispatches Fetch Fallback:', err))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchDispatches();
-    const interval = setInterval(fetchDispatches, 3000);
-    return () => clearInterval(interval);
+      .catch((err) => console.log('API Dispatches Fetch Fallback:', err));
   }, []);
 
   return (
@@ -51,31 +42,16 @@ export default function DispatchesPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">DISPATCHES & PIPELINE</div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dispatches Queue</h1>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>
-              Live Sync
-            </span>
-          </div>
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">CARE & PIPELINE</div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dispatches Queue</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {dispatches.length} dispatches registered — every record is tracked on the audit log.
+            13 dispatches on register — every lead & weight ticket is on the audit log.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchDispatches}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
-          >
-            <span className={loading ? 'animate-spin' : ''}>🔄</span> Refresh Now
-          </button>
-
-          <Link href="/" className="btn-dark-pill">
-            <span>+ Register Dispatch</span>
-          </Link>
-        </div>
+        <button className="btn-dark-pill">
+          <span>+ Register patient</span>
+        </button>
       </div>
 
       {/* Filter Control Bar */}
@@ -90,13 +66,13 @@ export default function DispatchesPage() {
             onClick={() => setFilter('All')}
             className={`filter-pill ${filter === 'All' ? 'active' : ''}`}
           >
-            All ({dispatches.length})
+            All
           </button>
           <button
             onClick={() => setFilter('Issued')}
             className={`filter-pill ${filter === 'Issued' ? 'active' : ''}`}
           >
-            Draft Issued
+            Issued
           </button>
           <button
             onClick={() => setFilter('Pending')}
@@ -125,37 +101,27 @@ export default function DispatchesPage() {
             </tr>
           </thead>
           <tbody>
-            {dispatches.map((item, idx) => (
-              <tr key={item.dispatch_id || idx}>
-                <td>
-                  <span className="font-bold text-slate-900">{item.dispatch_id}</span>
+            {dispatches.map((item) => (
+              <tr key={item.dispatch_id}>
+                <td className="font-bold text-slate-900">
+                  <Link href={`/dispatches/${item.dispatch_id}`} className="hover:underline">
+                    {item.dispatch_id}
+                  </Link>
                 </td>
-                <td>
-                  <div className="font-semibold text-slate-900">{item.customer}</div>
-                  <div className="text-[11px] text-slate-400 font-normal">Registered</div>
-                </td>
-                <td>
-                  <div className="text-xs font-semibold text-slate-900">{item.po_number}</div>
-                  <div className="text-[11px] text-slate-400 font-normal">Veh: {item.vehicle}</div>
-                </td>
-                <td>
-                  <div className="text-xs font-bold text-slate-900">{item.weight}</div>
-                  <div className="text-[11px] text-slate-400 font-normal">Rate: {item.rate}</div>
-                </td>
+                <td className="font-semibold text-slate-900">{item.customer}</td>
+                <td className="text-slate-600 font-medium">{item.po_number} · {item.vehicle}</td>
+                <td className="text-slate-900 font-bold">{item.weight} @ <span className="text-emerald-600">{item.rate}</span></td>
                 <td>
                   <span className={`status-badge ${
-                    item.status === 'DRAFT_INVOICE_CREATED' || item.status === 'VALIDATED' 
-                      ? 'issued' 
-                      : item.status === 'VALIDATION_REQUIRED' 
-                        ? 'critical' 
-                        : 'warning'
+                    item.status === 'DRAFT_INVOICE_CREATED' || item.status === 'VALIDATED' ? 'issued' :
+                    item.status === 'VALIDATION_REQUIRED' ? 'critical' : 'processing'
                   }`}>
-                    • {item.status}
+                    • {item.status === 'DRAFT_INVOICE_CREATED' ? 'Issued' : item.status === 'VALIDATED' ? 'Passed' : item.status === 'VALIDATION_REQUIRED' ? 'Critical Value' : 'Pending'}
                   </span>
                 </td>
                 <td>
-                  <Link href={`/dispatches/${item.dispatch_id}`} className="text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1">
-                    {item.action} <span>→</span>
+                  <Link href={`/dispatches/${item.dispatch_id}`} className="text-xs font-bold text-slate-900 hover:text-blue-600">
+                    {item.action} →
                   </Link>
                 </td>
               </tr>

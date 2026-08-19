@@ -38,7 +38,7 @@ Dispatch      : 12-08-2026`
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch('http://localhost:8000/api/v1/whatsapp/sessions', { headers });
+      const res = await fetch('/api/v1/whatsapp/sessions', { headers });
       if (res.ok) {
         const data = await res.json();
         setSessions(data);
@@ -63,7 +63,7 @@ Dispatch      : 12-08-2026`
     setSimulating(true);
     setSimResponse(null);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/whatsapp/agent/webhook', {
+      const res = await fetch('/api/v1/whatsapp/agent/webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -158,20 +158,14 @@ Dispatch      : 12-08-2026`
                     • {sess.session_status}
                   </span>
                   {sess.invoice_id && (
-                    /^\d+$/.test(sess.invoice_id) ? (
-                      <a
-                        href={`https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-bold text-blue-600 hover:underline"
-                      >
-                        Open Zoho Draft →
-                      </a>
-                    ) : (
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        Local Invoice ({sess.invoice_id.slice(0, 12)})
-                      </span>
-                    )
+                    <a
+                      href={`https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-bold text-blue-600 hover:underline"
+                    >
+                      Open Zoho Draft →
+                    </a>
                   )}
                 </div>
               </div>
