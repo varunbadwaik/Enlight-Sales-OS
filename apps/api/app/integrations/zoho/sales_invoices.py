@@ -38,7 +38,33 @@ class ZohoSalesInvoiceAdapter:
         Creates a Sales Invoice in DRAFT status in Zoho Books.
         Applies Customer PO selling rate lock (e.g. ₹58.00/kg).
         """
-        # 1. Build Payload
+        # 1. Resolve customer_id if missing
+        if not customer_id:
+            try:
+                contacts_res = await zoho_client.get("contacts")
+                contacts = contacts_res.get("contacts", [])
+                for c in contacts:
+                    c_name = (c.get("contact_name") or "").strip().lower()
+                    target_name = customer_name.strip().lower()
+                    if target_name in c_name or c_name in target_name:
+                        customer_id = str(c.get("contact_id"))
+                        logger.info(f"Found existing Zoho contact {customer_id} for '{customer_name}'")
+                        break
+
+                if not customer_id:
+                    create_c_res = await zoho_client.post("contacts", json_data={
+                        "contact_name": customer_name,
+                        "company_name": customer_name,
+                        "contact_type": "customer"
+                    })
+                    new_c = create_c_res.get("contact", {})
+                    if new_c.get("contact_id"):
+                        customer_id = str(new_c.get("contact_id"))
+                        logger.info(f"Created new Zoho contact {customer_id} for '{customer_name}'")
+            except Exception as exc:
+                logger.warning(f"Error resolving Zoho customer_id: {exc}")
+
+        # 2. Build Payload
         ref_text = f"{po_number}"
         if dispatch_date:
             ref_text += f" - {dispatch_date}"
@@ -54,41 +80,7 @@ class ZohoSalesInvoiceAdapter:
         if so_number:
             rich_description += f" | SO: {so_number}"
 
-        # Automatic customer_id resolution & dynamic customer contact creation
-        if not customer_id:
-            try:
-                contacts_res = await zoho_client.get("contacts")
-                contacts = contacts_res.get("contacts", [])
-                # 1. Search for matching customer contact type
-                for c in contacts:
-                    if c.get("contact_type") == "customer":
-                        c_name = c.get("contact_name", "")
-                        if customer_name.lower() in c_name.lower() or c_name.lower() in customer_name.lower():
-                            customer_id = str(c.get("contact_id"))
-                            break
-                # 2. If no matching customer contact exists, create customer dynamically in Zoho Books
-                if not customer_id:
-                    try:
-                        create_c_res = await zoho_client.post("contacts", json_data={
-                            "contact_name": customer_name,
-                            "contact_type": "customer"
-                        })
-                        new_contact = create_c_res.get("contact", {})
-                        if new_contact.get("contact_id"):
-                            customer_id = str(new_contact.get("contact_id"))
-                    except Exception as cex:
-                        logger.warning(f"Could not create new Zoho customer contact: {cex}")
-
-                # 3. Fallback to first available customer contact if creation blocked
-                if not customer_id:
-                    customer_contacts = [c for c in contacts if c.get("contact_type") == "customer"]
-                    if customer_contacts:
-                        customer_id = str(customer_contacts[0].get("contact_id"))
-            except Exception as e:
-                logger.warning(f"Failed to resolve Zoho customer ID: {e}")
-
         payload: Dict[str, Any] = {
-            "customer_id": customer_id or "4102947000000042007",
             "customer_name": customer_name,
             "reference_number": ref_text,
             "status": "draft",  # FORCE DRAFT STATUS
@@ -104,10 +96,12 @@ class ZohoSalesInvoiceAdapter:
             "terms": "Draft Sales Invoice generated automatically by Enlight Sales OS. Final verification and E-Way Bill by Accountant."
         }
 
+        if customer_id:
+            payload["customer_id"] = customer_id
         if project_id:
             payload["project_id"] = project_id
 
-        # 2. Call Zoho Books API (create invoice)
+        # 3. Call Zoho Books API (create invoice)
         logger.info(f"Submitting Sales Invoice draft payload to Zoho for PO {po_number} at rate ₹{customer_po_selling_rate}")
         invoice_id = None
         invoice_data = {}
@@ -118,6 +112,8 @@ class ZohoSalesInvoiceAdapter:
             invoice_data = response.get("invoice", {})
             invoice_id = invoice_data.get("invoice_id")
             returned_status = (invoice_data.get("status") or "draft").lower()
+            if not invoice_id and response.get("message"):
+                logger.warning(f"Zoho invoice POST returned message: {response.get('message')}")
         except Exception as e:
             logger.info(f"Zoho live API post error, checking existing invoices: {e}")
 
