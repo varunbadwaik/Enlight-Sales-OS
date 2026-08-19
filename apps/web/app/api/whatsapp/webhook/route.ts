@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Handles incoming Twilio WhatsApp webhooks, n8n workflows, and UI sync.
  */
 
-const DEFAULT_BACKEND_URL = 'https://similar-bow-lbs-franklin.trycloudflare.com';
+const DEFAULT_BACKEND_URL = 'https://clusters-ken-restaurant-disposition.trycloudflare.com';
 
 export async function POST(req: NextRequest) {
   try {
