@@ -92,7 +92,7 @@ async function handleRequest(req: NextRequest, params: { path: string[] }) {
   if (path === 'whatsapp/sessions') {
     return NextResponse.json({
       sessions: [
-        { session_id: 'WA-SESS-001', whatsapp_number: '+917588353703', status: 'ACTIVE', last_message: 'Purchase From: Reliance Industries Ltd...' }
+        { id: 'wa-sess-001', whatsapp_number: '+917588353703', session_status: 'COMPLETED', po_number: 'PO-TATA/1122', dispatch_id: 'DSP-98765', invoice_id: '4102947000000141001', created_at: new Date().toISOString() }
       ]
     });
   }

@@ -167,7 +167,9 @@ Dispatch      : 12-08-2026`
                   </span>
                   {sess.invoice_id && (
                     <a
-                      href={`https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`}
+                      href={/^\d+$/.test(String(sess.invoice_id)) 
+                        ? `https://books.zoho.in/app/60082578964#/invoices/${sess.invoice_id}`
+                        : `https://books.zoho.in/app/60082578964#/invoices`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs font-bold text-blue-600 hover:underline"
