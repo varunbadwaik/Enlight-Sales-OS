@@ -253,12 +253,22 @@ async def whatsapp_agent_webhook(
             customer_name=parsed_customer,
             po_number=parsed_po
         )
+        try:
+            await twilio_service.send_whatsapp_message(to_number=sender_phone, message_body=final_msg)
+        except Exception as tw_err:
+            logger.warning(f"Could not send outbound WhatsApp via Twilio REST API: {tw_err}")
+
         twiml = twilio_service.build_twiml_response(final_msg)
         return Response(content=twiml, media_type="text/xml")
 
     # Send status checklist if incomplete
     checklist = twilio_service.format_checklist_message(session)
     full_reply = (reply_text + checklist) if reply_text else checklist
+
+    try:
+        await twilio_service.send_whatsapp_message(to_number=sender_phone, message_body=full_reply)
+    except Exception as tw_err:
+        logger.warning(f"Could not send outbound WhatsApp via Twilio REST API: {tw_err}")
 
     twiml = twilio_service.build_twiml_response(full_reply)
     return Response(content=twiml, media_type="text/xml")

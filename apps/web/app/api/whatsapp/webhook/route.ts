@@ -39,18 +39,21 @@ export async function POST(req: NextRequest) {
 
     // Forward to active Cloudflare Tunnel / FastAPI backend
     const backendUrl = process.env.FASTAPI_BACKEND_URL || DEFAULT_BACKEND_URL;
-    let backendSuccess = false;
 
     try {
-      const apiRes = await fetch(`${backendUrl}/api/v1/whatsapp/webhook`, {
+      const apiRes = await fetch(`${backendUrl}/api/v1/whatsapp/agent/webhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(payload).toString(),
-        signal: AbortSignal.timeout(25000), // 25 second timeout for Zoho Books API calls
+        signal: AbortSignal.timeout(25000), // 25 second timeout for Zoho Books API & Gemini Vision calls
       });
 
       if (apiRes.ok) {
-        backendSuccess = true;
+        const text = await apiRes.text();
+        return new NextResponse(text, {
+          status: 200,
+          headers: { 'Content-Type': 'text/xml' }
+        });
       }
     } catch (err) {
       console.warn('[Webhook Proxy] Primary backend timeout/unreachable, processing locally.', err);
