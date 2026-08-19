@@ -122,7 +122,9 @@ export default function InvoicesPage() {
                 </td>
                 <td>
                   <a
-                    href={`https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id || item.invoice_id}`}
+                    href={(item.zoho_sales_invoice_id || item.invoice_id) && /^\d+$/.test(String(item.zoho_sales_invoice_id || item.invoice_id))
+                      ? `https://books.zoho.in/app/60082578964#/invoices/${item.zoho_sales_invoice_id || item.invoice_id}`
+                      : `https://books.zoho.in/app/60082578964#/invoices`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs font-bold text-blue-600 hover:text-blue-800 underline flex items-center gap-1"

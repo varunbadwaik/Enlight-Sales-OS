@@ -435,6 +435,19 @@ export default function DispatchDetailPage({ params }: { params: { id: string } 
               </p>
             </div>
           </div>
+          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <a
+              href={invoiceDetails?.invoice_id && /^\d+$/.test(String(invoiceDetails.invoice_id))
+                ? `https://books.zoho.in/app/60082578964#/invoices/${invoiceDetails.invoice_id}`
+                : `https://books.zoho.in/app/60082578964#/invoices`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary"
+              style={{ padding: '10px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              Open in Zoho Books →
+            </a>
+          </div>
         </div>
       )}
 
