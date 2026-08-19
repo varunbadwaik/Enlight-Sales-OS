@@ -16,7 +16,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://localhost:8000/api/v1/whatsapp/agent/webhook",
+        "url": "https://web-chi-azure-76.vercel.app/api/whatsapp/webhook",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.body }}",
