@@ -1,5 +1,5 @@
 {
-  "name": "Enlight Sales OS - Unified E2E Dispatch to Draft Invoice Flow (with WhatsApp AI Agent)",
+  "name": "Enlight Sales OS - Unified E2E Dispatch to Draft Invoice Flow (with WhatsApp AI Agent & Vercel Sync)",
   "nodes": [
     {
       "parameters": {
@@ -212,6 +212,21 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [2320, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://web-chi-azure-76.vercel.app/api/whatsapp/webhook",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"WORKFLOW_COMPLETED\",\n  \"dispatch_id\": \"{{ $node[\"2. FastAPI Intake Endpoint\"].json.dispatch_id }}\",\n  \"invoice_id\": \"{{ $node[\"9. Create Draft Sales Invoice (PO Rate ₹58 Lock)\"].json.invoice_id }}\",\n  \"selling_rate\": 58.0,\n  \"status\": \"DRAFT_ISSUED\",\n  \"timestamp\": \"{{ $now.toISOString() }}\"\n}",
+        "options": {}
+      },
+      "id": "c1a2b3c4-0011-4000-8000-000000000011c",
+      "name": "10c. Permanent Vercel Webhook Sync (UI & WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2320, 420]
     }
   ],
   "connections": {
@@ -349,6 +364,11 @@
           },
           {
             "node": "10b. Send Dual-Output WhatsApp & System Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "10c. Permanent Vercel Webhook Sync (UI & WhatsApp)",
             "type": "main",
             "index": 0
           }
